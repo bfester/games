@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tabliczka mnożenia</title>
+<style>
+  :root { --bg:#1e1e2e; --fg:#cdd6f4; --card:#313244; --ok:#a6e3a1; --bad:#f38ba8; --accent:#89b4fa; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+         background:var(--bg); color:var(--fg); font-family:system-ui, sans-serif; }
+  .app { width:min(92vw, 520px); text-align:center; }
+  .top { display:flex; justify-content:space-between; font-size:1.3rem; margin-bottom:1.5rem; }
+  .timer.low { color:var(--bad); }
+  .question { font-size:4.5rem; font-weight:bold; margin:1rem 0 2rem; min-height:5.5rem; }
+  .answers { display:grid; gap:1rem; }
+  button { font:inherit; font-size:2.2rem; padding:1rem; border:0; border-radius:14px;
+           background:var(--card); color:var(--fg); cursor:pointer; transition:transform .1s; }
+  button:hover { transform:scale(1.03); }
+  button.ok { background:var(--ok); color:#111; }
+  button.bad { background:var(--bad); color:#111; }
+  button:disabled { cursor:default; }
+  .start { font-size:1.8rem; background:var(--accent); color:#111; }
+  .hint { opacity:.6; margin-top:1.5rem; font-size:.95rem; }
+  .summary p { font-size:1.4rem; margin:.4rem 0; }
+  .summary h2 { font-size:2.5rem; margin-bottom:1rem; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div id="screen-start">
+    <h1>Tabliczka mnożenia</h1>
+    <p>25 minut, pytania z zakresu 1–10, trzy odpowiedzi do wyboru.</p>
+    <button class="start" onclick="startGame()">Start</button>
+  </div>
+
+  <div id="screen-game" class="hidden">
+    <div class="top">
+      <span id="timer" class="timer">25:00</span>
+      <span>✅ <span id="good">0</span> &nbsp; ❌ <span id="wrong">0</span></span>
+    </div>
+    <div class="question" id="question"></div>
+    <div class="answers" id="answers"></div>
+    <div class="hint">Możesz też wcisnąć klawisz 1, 2 lub 3</div>
+  </div>
+
+  <div id="screen-end" class="hidden summary">
+    <h2>Koniec!</h2>
+    <p>Dobre odpowiedzi: <b id="end-good"></b></p>
+    <p>Złe odpowiedzi: <b id="end-wrong"></b></p>
+    <p>Skuteczność: <b id="end-pct"></b></p>
+    <p>Najdłuższa seria: <b id="end-streak"></b></p>
+    <p id="end-hard"></p>
+    <br>
+    <button class="start" onclick="location.reload()">Jeszcze raz</button>
+  </div>
+
+</div>
+
+<script>
+const DURATION = 25 * 60;
+let timeLeft = DURATION, good = 0, wrong = 0, streak = 0, bestStreak = 0;
+let current = null, locked = false, timerId = null;
+const mistakes = {};
+
+const $ = id => document.getElementById(id);
+const rnd = n => Math.floor(Math.random() * n);
+
+function startGame() {
+  $('screen-start').classList.add('hidden');
+  $('screen-game').classList.remove('hidden');
+  timerId = setInterval(tick, 1000);
+  nextQuestion();
+}
+
+function tick() {
+  timeLeft--;
+  const m = String(Math.floor(timeLeft / 60)).padStart(2, '0');
+  const s = String(timeLeft % 60).padStart(2, '0');
+  $('timer').textContent = `${m}:${s}`;
+  if (timeLeft <= 60) $('timer').classList.add('low');
+  if (timeLeft <= 0) endGame();
+}
+
+function makeOptions(a, b) {
+  const correct = a * b;
+  const set = new Set([correct]);
+  const candidates = [
+    (a + 1) * b, (a - 1) * b, a * (b + 1), a * (b - 1),
+    correct + a, correct - a, correct + b, correct - b,
+    correct + 1, correct - 1, correct + 2, correct - 2, correct + 10, correct - 10,
+  ].filter(v => v > 0 && v <= 100 && v !== correct);
+  while (set.size < 3) {
+    const v = candidates.length ? candidates.splice(rnd(candidates.length), 1)[0] : rnd(100) + 1;
+    set.add(v);
+  }
+  return [...set].sort(() => Math.random() - 0.5);
+}
+
+function nextQuestion() {
+  let a, b;
+  do { a = rnd(10) + 1; b = rnd(10) + 1; } while (current && a === current.a && b === current.b);
+  current = { a, b, answer: a * b };
+  locked = false;
+  $('question').textContent = `${a} × ${b} = ?`;
+  const box = $('answers');
+  box.innerHTML = '';
+  makeOptions(a, b).forEach((v, i) => {
+    const btn = document.createElement('button');
+    btn.textContent = v;
+    btn.onclick = () => choose(btn, v);
+    box.appendChild(btn);
+  });
+}
+
+function choose(btn, value) {
+  if (locked) return;
+  locked = true;
+  const buttons = [...$('answers').children];
+  buttons.forEach(b => b.disabled = true);
+  if (value === current.answer) {
+    good++; streak++; bestStreak = Math.max(bestStreak, streak);
+    btn.classList.add('ok');
+  } else {
+    wrong++; streak = 0;
+    btn.classList.add('bad');
+    buttons.find(b => +b.textContent === current.answer).classList.add('ok');
+    const key = `${current.a} × ${current.b}`;
+    mistakes[key] = (mistakes[key] || 0) + 1;
+  }
+  $('good').textContent = good;
+  $('wrong').textContent = wrong;
+  setTimeout(nextQuestion, value === current.answer ? 500 : 1300);
+}
+
+document.addEventListener('keydown', e => {
+  if ($('screen-game').classList.contains('hidden')) return;
+  const i = ['1', '2', '3'].indexOf(e.key);
+  if (i < 0) return;
+  const btn = $('answers').children[i];
+  if (btn) choose(btn, +btn.textContent);
+});
+
+function endGame() {
+  clearInterval(timerId);
+  $('screen-game').classList.add('hidden');
+  $('screen-end').classList.remove('hidden');
+  const total = good + wrong;
+  $('end-good').textContent = good;
+  $('end-wrong').textContent = wrong;
+  $('end-pct').textContent = total ? Math.round(good / total * 100) + '%' : '–';
+  $('end-streak').textContent = bestStreak;
+  const hard = Object.entries(mistakes).sort((x, y) => y[1] - x[1]).slice(0, 5).map(([k]) => k);
+  $('end-hard').textContent = hard.length ? 'Do poćwiczenia: ' + hard.join(', ') : 'Bezbłędnie!';
+}
+</script>
+</body>
+</html>
