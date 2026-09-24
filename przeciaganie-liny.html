@@ -17,7 +17,10 @@
            background:var(--accent); color:#111; cursor:pointer; transition:transform .1s; }
   button:hover { transform:scale(1.04); }
 
-  #sound-btn { position:fixed; top:.7rem; right:.8rem; font-size:1.4rem; padding:.4rem .7rem; background:var(--card); color:var(--fg); }
+  .snd { position:fixed; top:.7rem; font-size:1.4rem; padding:.4rem .7rem; background:var(--card); color:var(--fg); }
+  #sound-btn { right:.8rem; }
+  #music-btn { right:4.2rem; }
+  #music-btn.off { opacity:.4; }
 
   .top { display:flex; justify-content:space-between; align-items:center; font-size:1.2rem; margin-bottom:.3rem; }
   .level { font-weight:bold; color:var(--accent); }
@@ -34,6 +37,11 @@
   @keyframes strain { 0%,100% { transform:rotate(-6deg) translateY(0); } 50% { transform:rotate(-11deg) translateY(1px); } }
   @keyframes tug { 0% { transform:rotate(-6deg); } 35% { transform:rotate(-26deg) translateX(-6px); } 100% { transform:rotate(-6deg); } }
   .arm { stroke-linecap:round; }
+  .mudspots { opacity:0; transition:opacity .5s; }
+  .muddy .mudspots { opacity:1; }
+  .bubble { animation:bubble 3s ease-in infinite; transform-box:fill-box; transform-origin:center; }
+  .bubble.b2 { animation-delay:-1.3s; } .bubble.b3 { animation-delay:-2.2s; }
+  @keyframes bubble { 0%,70% { transform:scale(0); opacity:1; } 90% { transform:scale(1); opacity:1; } 100% { transform:scale(1.3); opacity:0; } }
   .leg { stroke-linecap:round; }
 
   /* ---------- pytanie i panele ---------- */
@@ -76,15 +84,17 @@
 </style>
 </head>
 <body>
-<button id="sound-btn" onclick="Sound.toggle()" title="Dźwięk">🔊</button>
+<button id="music-btn" class="snd" onclick="Sound.toggleMusic()" title="Muzyka">🎵</button>
+<button id="sound-btn" class="snd" onclick="Sound.toggle()" title="Dźwięk">🔊</button>
 <div class="app">
 
   <div id="screen-start" class="banner">
     <h1>🪢 Matematyczne przeciąganie liny</h1>
     <p>Ty kontra robot. Oboje dostajecie <b>to samo pytanie</b> z tabliczki mnożenia i odpowiadacie <b>w tym samym czasie</b>.<br>
        Kto pierwszy odpowie dobrze – ciągnie linę do siebie. Zła odpowiedź to przeciągnięcie dla przeciwnika.<br>
-       Kto zostanie wciągnięty do rowu, przegrywa!</p>
-    <p>Przeciągnij linę <b>5 razy</b> do siebie, żeby wygrać poziom.<br>Poziomów jest <b>10</b> – z każdym robot jest szybszy, myli się rzadziej, a odpowiedzi do wyboru jest więcej.</p>
+       Kto zostanie wciągnięty do błota, przegrywa!</p>
+    <p>Przeciągnij linę <b>5 razy</b> do siebie, żeby wygrać poziom.<br>Poziomów jest <b>10</b> – z każdym robot myli się rzadziej,
+       a <b>pytania, z którymi masz kłopot</b>, pojawiają się częściej.</p>
     <p id="best-info"></p>
     <button onclick="startLevel(1)">Start od poziomu 1</button>
     <button id="btn-continue" class="hidden" onclick="startLevel(bestLevel)">Kontynuuj</button>
@@ -104,9 +114,16 @@
         <linearGradient id="pit" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color="#4a3420"/><stop offset="1" stop-color="#1a0f05"/>
         </linearGradient>
+        <linearGradient id="mud" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#7a5230"/><stop offset="1" stop-color="#3b2512"/>
+        </linearGradient>
         <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color="#7ec850"/><stop offset=".15" stop-color="#7ec850"/><stop offset=".16" stop-color="#5a9a3c"/><stop offset="1" stop-color="#3f6f2a"/>
         </linearGradient>
+        <!-- zamienia kolory na brązowe: ktoś cały w błocie -->
+        <filter id="dirty" color-interpolation-filters="sRGB">
+          <feColorMatrix type="matrix" values=".22 .42 .1 0 .07  .15 .3 .07 0 .04  .07 .15 .04 0 .01  0 0 0 1 0"/>
+        </filter>
       </defs>
       <rect width="720" height="250" fill="url(#sky)"/>
       <circle cx="650" cy="45" r="22" fill="#ffe27a"/>
@@ -114,27 +131,30 @@
         <ellipse cx="110" cy="50" rx="34" ry="14"/><ellipse cx="130" cy="42" rx="22" ry="14"/>
         <ellipse cx="520" cy="35" rx="30" ry="12"/><ellipse cx="540" cy="28" rx="18" ry="12"/>
       </g>
-      <!-- tło: ziemia -->
-      <rect x="0" y="170" width="290" height="80" fill="url(#grass)"/>
-      <rect x="430" y="170" width="290" height="80" fill="url(#grass)"/>
-      <!-- rów -->
+      <!-- tło: ziemia (sięga pod skośne ściany rowu) -->
+      <rect x="0" y="170" width="306" height="80" fill="url(#grass)"/>
+      <rect x="414" y="170" width="306" height="80" fill="url(#grass)"/>
+      <!-- rów z błotem -->
       <path d="M290 170 L305 250 L415 250 L430 170 Z" fill="url(#pit)"/>
-      <ellipse cx="360" cy="236" rx="52" ry="10" fill="#3d6b8f"/>
-      <ellipse cx="360" cy="234" rx="44" ry="6" fill="#5b93c4" opacity=".8"/>
-      <text x="360" y="228" font-size="20" text-anchor="middle">🐊</text>
-      <!-- lina -->
+      <path d="M297 206 Q330 200 360 206 T424 205 L415 250 L305 250 Z" fill="url(#mud)"/>
+      <g fill="#8a6038">
+        <circle class="bubble" cx="330" cy="208" r="4"/>
+        <circle class="bubble b2" cx="378" cy="207" r="3"/>
+        <circle class="bubble b3" cx="402" cy="209" r="3.5"/>
+      </g>
+      <!-- lina: końcówki leżą na ziemi za zawodnikami -->
       <g id="rope" class="rope-g">
-        <path d="M252 118 Q360 132 468 118" fill="none" stroke="#7a4b21" stroke-width="8" stroke-linecap="round"/>
-        <path d="M252 118 Q360 132 468 118" fill="none" stroke="#d9a866" stroke-width="5" stroke-dasharray="6 6" stroke-linecap="round"/>
+        <path d="M66 167 Q98 169 104 163 C112 136 150 121 200 119 Q360 132 520 119 C570 121 608 136 616 163 Q622 169 654 167" fill="none" stroke="#7a4b21" stroke-width="8" stroke-linecap="round"/>
+        <path d="M66 167 Q98 169 104 163 C112 136 150 121 200 119 Q360 132 520 119 C570 121 608 136 616 163 Q622 169 654 167" fill="none" stroke="#d9a866" stroke-width="5" stroke-dasharray="6 6" stroke-linecap="round"/>
         <g transform="translate(360 125)">
           <line x1="0" y1="0" x2="0" y2="-26" stroke="#333" stroke-width="2"/>
           <path d="M0 -26 L18 -19 L0 -12 Z" fill="#e63946"/>
         </g>
       </g>
 
-      <!-- UCZEŃ (stopy w punkcie 220,170) -->
+      <!-- UCZEŃ (stopy w punkcie 170,170) -->
       <g id="me" class="actor">
-        <g transform="translate(220 170)">
+        <g transform="translate(170 170)">
           <g class="body b1">
             <line class="leg" x1="0" y1="-50" x2="-18" y2="-2" stroke="#3a5fcd" stroke-width="10"/>
             <line class="leg" x1="0" y1="-50" x2="22" y2="-2" stroke="#3a5fcd" stroke-width="10"/>
@@ -146,16 +166,27 @@
             <circle cx="27" cy="-53" r="5.5" fill="#f5c9a0"/>
             <circle cx="37" cy="-49" r="5.5" fill="#f5c9a0"/>
             <circle cx="-14" cy="-106" r="16" fill="#f5c9a0"/>
-            <path d="M-31 -108 Q-14 -132 4 -110 Q-4 -118 -12 -116 Q-22 -116 -31 -108 Z" fill="#5b3a1a"/>
-            <circle cx="-8" cy="-108" r="2.2" fill="#222"/>
-            <path d="M-6 -100 q4 3 6 -1" stroke="#a33" stroke-width="2" fill="none"/>
+            <!-- krótkie, rozczochrane włosy z grzywką -->
+            <path d="M-30 -99 C-34 -112 -28 -123 -15 -124 C-4 -125 3 -119 2 -111
+                     L-2 -114 L-4 -109 L-8 -114 L-11 -110 L-14 -115 L-18 -111 L-21 -115
+                     C-24 -110 -25 -105 -26 -99 Z" fill="#6b4423"/>
+            <path d="M-19 -122 L-17 -131 L-13 -123 L-9 -129 L-8 -121 Z" fill="#6b4423"/>
+            <circle cx="-22" cy="-104" r="3.5" fill="#eab48a"/>
+            <circle cx="-7" cy="-106" r="2.2" fill="#222"/>
+            <circle cx="-2" cy="-101" r="2.5" fill="#f4a0a0" opacity=".6"/>
+            <path d="M-8 -98 q4 3 7 -1" stroke="#a33" stroke-width="2" fill="none"/>
+            <g class="mudspots" fill="#4a3018">
+              <ellipse cx="-12" cy="-118" rx="9" ry="5"/><ellipse cx="-5" cy="-100" rx="4" ry="3"/>
+              <ellipse cx="-6" cy="-72" rx="7" ry="11"/><ellipse cx="8" cy="-30" rx="5" ry="8"/>
+              <path d="M-20 -102 q-2 8 0 10 q2 -2 1 -10 Z"/><path d="M-2 -60 q-2 9 0 12 q2 -3 1 -12 Z"/>
+            </g>
           </g>
         </g>
       </g>
 
-      <!-- ROBOT (stopy w punkcie 500,170), odbity lustrzanie -->
+      <!-- ROBOT (stopy w punkcie 550,170), odbity lustrzanie -->
       <g id="cpu" class="actor">
-        <g transform="translate(500 170) scale(-1 1)">
+        <g transform="translate(550 170) scale(-1 1)">
           <g class="body b2">
             <line class="leg" x1="0" y1="-50" x2="-18" y2="-2" stroke="#6c7a89" stroke-width="10"/>
             <line class="leg" x1="0" y1="-50" x2="22" y2="-2" stroke="#6c7a89" stroke-width="10"/>
@@ -175,16 +206,22 @@
             <rect x="-22" y="-107" width="18" height="3" fill="#2f3640"/>
             <line x1="-13" y1="-130" x2="-13" y2="-142" stroke="#5d6d7e" stroke-width="3"/>
             <circle cx="-13" cy="-145" r="4" fill="#f1c40f"/>
+            <g class="mudspots" fill="#4a3018">
+              <ellipse cx="-14" cy="-126" rx="12" ry="5"/><ellipse cx="-24" cy="-110" rx="4" ry="5"/>
+              <ellipse cx="-8" cy="-60" rx="9" ry="10"/><ellipse cx="10" cy="-28" rx="5" ry="8"/>
+              <path d="M-16 -100 q-2 10 0 13 q2 -3 1 -13 Z"/><path d="M0 -52 q-2 9 0 12 q2 -3 1 -12 Z"/>
+            </g>
           </g>
         </g>
       </g>
 
-      <!-- pierwszy plan: ziemia przykrywa wpadających -->
+      <!-- pierwszy plan: ziemia i błoto przykrywają wpadających -->
+      <path d="M300 222 Q330 216 360 222 T421 221 L415 250 L305 250 Z" fill="#5a3a1c"/>
       <rect x="0" y="170" width="290" height="80" fill="url(#grass)"/>
       <rect x="430" y="170" width="290" height="80" fill="url(#grass)"/>
       <text x="150" y="215" font-size="17" text-anchor="middle" fill="#fff" font-weight="bold">Ty</text>
       <text x="580" y="215" font-size="17" text-anchor="middle" fill="#fff" font-weight="bold">Robot</text>
-      <text x="360" y="90" id="splash" font-size="44" text-anchor="middle"></text>
+      <g id="splash"></g>
     </svg>
 
     <div class="question" id="question"></div>
@@ -213,7 +250,7 @@
 
   <div id="screen-win" class="hidden banner">
     <h2>🏆 Mistrz tabliczki mnożenia!</h2>
-    <p>Wciągnąłeś robota do rowu na wszystkich 10 poziomach!</p>
+    <p>Wciągnąłeś robota w błoto na wszystkich 10 poziomach!</p>
     <p>Twoje dobre odpowiedzi: <b id="win-good"></b>, złe: <b id="win-wrong"></b></p>
     <br>
     <button onclick="location.reload()">Od nowa</button>
@@ -224,8 +261,10 @@
 <script>
 /* =========================== DŹWIĘK =========================== */
 const Sound = {
-  ctx: null, master: null, musicGain: null, on: localStorage.getItem('lina-sound') !== 'off',
-  musicTimer: null, nextNoteTime: 0, noteIndex: 0,
+  ctx: null, master: null, musicGain: null,
+  on: localStorage.getItem('lina-sound') !== 'off',
+  musicOn: localStorage.getItem('lina-music') !== 'off',
+  musicTimer: null, clapBuf: null,
   init() {
     if (this.ctx) { this.ctx.resume(); return; }
     const C = window.AudioContext || window.webkitAudioContext;
@@ -235,7 +274,7 @@ const Sound = {
     this.master.gain.value = this.on ? 1 : 0;
     this.master.connect(this.ctx.destination);
     this.musicGain = this.ctx.createGain();
-    this.musicGain.gain.value = 0.16;
+    this.musicGain.gain.value = this.musicOn ? 0.12 : 0;
     this.musicGain.connect(this.master);
     this.updateBtn();
   },
@@ -245,7 +284,16 @@ const Sound = {
     if (this.master) this.master.gain.value = this.on ? 1 : 0;
     this.updateBtn();
   },
-  updateBtn() { document.getElementById('sound-btn').textContent = this.on ? '🔊' : '🔇'; },
+  toggleMusic() {
+    this.musicOn = !this.musicOn;
+    localStorage.setItem('lina-music', this.musicOn ? 'on' : 'off');
+    if (this.musicGain) this.musicGain.gain.value = this.musicOn ? 0.12 : 0;
+    this.updateBtn();
+  },
+  updateBtn() {
+    $('sound-btn').textContent = this.on ? '🔊' : '🔇';
+    $('music-btn').classList.toggle('off', !this.musicOn);
+  },
   tone(freq, dur, type = 'square', vol = .2, when = 0, slideTo = null, dest = null) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime + when;
@@ -276,49 +324,186 @@ const Sound = {
   buzz()    { this.tone(160, .35, 'sawtooth', .18, 0, 90); },
   pull()    { this.noise(.3, .35, 1200, 200); },
   robot()   { this.tone(900, .06, 'square', .12); this.tone(1200, .06, 'square', .12, .07); },
-  splash()  { this.tone(320, .5, 'sine', .25, 0, 60); this.noise(.7, .45, 600, 150, .1); },
+  splat()   { this.noise(.25, .5, 500, 120); this.tone(140, .35, 'sine', .35, 0, 50); this.noise(.5, .3, 350, 100, .12); },
   fanfare() { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, .3, 'square', .18, i * .15)); this.tone(1047, .6, 'square', .18, .6); },
-  sad()     { [392, 349, 311, 262].forEach((f, i) => this.tone(f, .35, 'triangle', .22, i * .25)); },
 
-  // prosta pętla muzyczna (chiptune)
-  MELODY: [72,74,76,72, 76,72,76,0, 74,76,77,74, 77,74,77,0, 76,77,79,76, 79,76,79,0, 81,79,77,76, 74,72,74,0,
-           67,72,76,72, 79,76,72,0, 69,72,77,72, 81,77,72,0, 71,74,79,74, 83,79,74,0, 72,76,79,76, 84,79,76,0],
-  BASS:   [48,55,52,55, 53,60,57,60, 52,59,55,59, 53,55,48,55, 48,55,52,55, 53,60,57,60, 55,59,55,59, 48,52,55,60],
+  // tłum buczy: kilka „głosów” ze zjeżdżającą w dół barwą „uuu”
+  boo(when = 0) {
+    if (!this.ctx) return;
+    const t0 = this.ctx.currentTime + when, dur = 2.2;
+    const f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 520; f.Q.value = 2;
+    f.connect(this.master);
+    for (let i = 0; i < 7; i++) {
+      const t = t0 + Math.random() * .25;
+      const base = 105 + Math.random() * 90;
+      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      const lfo = this.ctx.createOscillator(), lg = this.ctx.createGain();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(base * 1.08, t);
+      o.frequency.linearRampToValueAtTime(base, t + .4);
+      o.frequency.exponentialRampToValueAtTime(base * .78, t + dur);
+      lfo.frequency.value = 4 + Math.random() * 2; lg.gain.value = 3;
+      lfo.connect(lg); lg.connect(o.frequency);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(.09, t + .3);
+      g.gain.setValueAtTime(.09, t + dur - .6);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(f);
+      o.start(t); lfo.start(t); o.stop(t + dur + .05); lfo.stop(t + dur + .05);
+    }
+  },
+
+  // oklaski: dużo krótkich, losowych „klaśnięć” szumu
+  applause(when = 0) {
+    if (!this.ctx) return;
+    if (!this.clapBuf) {
+      const n = Math.floor(this.ctx.sampleRate * .04);
+      this.clapBuf = this.ctx.createBuffer(1, n, this.ctx.sampleRate);
+      const d = this.clapBuf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3);
+    }
+    const t0 = this.ctx.currentTime + when, dur = 3;
+    for (let k = 0; k < 110; k++) {
+      const x = Math.random();                         // pozycja w czasie 0..1
+      const t = t0 + x * dur;
+      const env = Math.min(1, x * 6) * (1 - Math.pow(x, 2));
+      const src = this.ctx.createBufferSource(); src.buffer = this.clapBuf;
+      src.playbackRate.value = .8 + Math.random() * .5;
+      const f = this.ctx.createBiquadFilter(); f.type = 'bandpass';
+      f.frequency.value = 900 + Math.random() * 1600; f.Q.value = 1.2;
+      const g = this.ctx.createGain(); g.gain.value = (.25 + Math.random() * .35) * env;
+      src.connect(f); f.connect(g); g.connect(this.master);
+      src.start(t);
+    }
+  },
+
+  // ---- muzyka: „Taniec Wieszczki Cukrowej” (Czajkowski, Dziadek do orzechów) ----
+  // [nuta MIDI, długość w szesnastkach]; 0 = pauza
+  SONG: [
+    [71,2],[67,2],[71,2],[70,2], [66,2],[67,2],[64,4],
+    [64,1],[64,1],[64,1],[63,1],[62,1],[62,1],[62,1],[61,1], [60,1],[60,1],[60,1],[59,1],[59,4],
+    [76,2],[72,2],[76,2],[75,2], [71,2],[72,2],[69,4],
+    [69,1],[69,1],[69,1],[68,1],[67,1],[67,1],[67,1],[66,1], [65,1],[65,1],[65,1],[64,1],[64,4],
+    [71,2],[67,2],[71,2],[70,2], [66,2],[67,2],[64,4],
+    [64,1],[64,1],[64,1],[63,1],[62,1],[62,1],[62,1],[61,1], [60,1],[60,1],[60,1],[59,1],[64,4],
+  ],
+  // bas pizzicato: [pierwsza ćwierćnuta, druga ćwierćnuta] na takt 2/4
+  BASS: [[40,47],[40,47],[40,47],[35,42], [45,52],[45,52],[45,52],[40,47], [40,47],[40,47],[40,47],[35,40]],
   midi(n) { return 440 * Math.pow(2, (n - 69) / 12); },
+  celesta(freq, when, dur) {
+    this.tone(freq, dur, 'sine', .5, when, null, this.musicGain);
+    this.tone(freq * 2, dur * .4, 'sine', .12, when, null, this.musicGain);
+    this.tone(freq * 4.2, dur * .15, 'sine', .05, when, null, this.musicGain);
+  },
   startMusic() {
     if (!this.ctx || this.musicTimer) return;
-    const STEP = 0.19;                              // ósemka
-    this.nextNoteTime = this.ctx.currentTime + 0.1; this.noteIndex = 0;
+    const U = 0.2;                                  // szesnastka [s]
+    let t = this.ctx.currentTime + 0.2, bt = t, i = 0, q = 0, pass = 0;
     const schedule = () => {
-      while (this.nextNoteTime < this.ctx.currentTime + 0.25) {
-        const i = this.noteIndex;
-        const m = this.MELODY[i % this.MELODY.length];
-        if (m) this.tone(this.midi(m), STEP * 0.9, 'square', .5, this.nextNoteTime - this.ctx.currentTime, null, this.musicGain);
-        if (i % 2 === 0) {
-          const b = this.BASS[(i / 2) % this.BASS.length];
-          this.tone(this.midi(b), STEP * 1.6, 'triangle', .9, this.nextNoteTime - this.ctx.currentTime, null, this.musicGain);
-        }
-        this.nextNoteTime += STEP; this.noteIndex++;
+      const now = this.ctx.currentTime, horizon = now + 0.4;
+      while (t < horizon) {
+        const [m, d] = this.SONG[i];
+        if (m) this.celesta(this.midi(m + (pass % 2 ? 12 : 0)), t - now, Math.max(.35, d * U * 1.6));
+        t += d * U;
+        if (++i === this.SONG.length) { i = 0; pass++; t += 4 * U; bt += 4 * U; }
+      }
+      while (bt < horizon) {
+        const bar = this.BASS[Math.floor(q / 2) % this.BASS.length];
+        this.tone(this.midi(bar[q % 2]), .3, 'triangle', .6, bt - now, null, this.musicGain);
+        bt += 4 * U; q++;
       }
     };
-    this.musicTimer = setInterval(schedule, 60);
+    this.musicTimer = setInterval(schedule, 80);
   },
-  stopMusic() { clearInterval(this.musicTimer); this.musicTimer = null; },
 };
-Sound.updateBtn();
+
+/* ================ PAMIĘĆ ODPOWIEDZI (krótkie powtórki) ================ */
+// Każde działanie a×b (a ≤ b) ma „opanowanie” m ∈ (0,1): pamiętane między sesjami.
+// Błędy wracają po 2–3 pytaniach, a potem coraz rzadziej, póki uczeń odpowiada dobrze.
+const Facts = {
+  list: [],
+  stats: JSON.parse(localStorage.getItem('lina-facts') || '{}'),
+  due: {}, gap: {}, n: 0, recent: [],
+
+  // wrodzona trudność działania 0..1 (×2, ×10, ×5 łatwe; 6–9 × 6–9 trudne)
+  intrinsic(a, b) {
+    if (a === 2 || b === 2 || a === 10 || b === 10) return .1;
+    if (a === 5 || b === 5) return .25;
+    let d = .3 + (a >= 6 ? .3 : 0) + (b >= 6 ? .3 : 0);
+    if (a === b) d -= .1;
+    return Math.min(1, d);
+  },
+  init() {
+    for (let a = 2; a <= 10; a++) for (let b = a; b <= 10; b++) {
+      const key = a + 'x' + b;
+      this.list.push({ a, b, key, hard: this.intrinsic(a, b) });
+      if (!this.stats[key]) this.stats[key] = { m: .9 - .6 * this.intrinsic(a, b), seen: 0 };
+    }
+  },
+  m(f) { return this.stats[f.key].m; },
+  save() { localStorage.setItem('lina-facts', JSON.stringify(this.stats)); },
+
+  // Na poziomie 1 ~20% pytań to „trudne”, na poziomie 10 ~70% (czyli nadal ~30% łatwych).
+  pick(level) {
+    this.n++;
+    const t = (level - 1) / (MAX_LEVEL - 1);
+    const pHard = 0.2 + 0.5 * t;
+    const pool = this.list.filter(f => !this.recent.includes(f.key));
+    const due = pool.filter(f => this.due[f.key] !== undefined && this.due[f.key] <= this.n)
+                    .sort((x, y) => this.due[x.key] - this.due[y.key]);
+    const hard = Math.random() < pHard;
+    let f;
+    // zaległa powtórka: przy „trudnym” losowaniu, albo gdy czeka już długo
+    if (due.length && (hard || this.n - this.due[due[0].key] >= 4)) f = due[0];
+    else f = weighted(pool, hard ? x => Math.pow(1 - this.m(x), 3) + .002 : x => Math.pow(this.m(x), 3) + .002);
+    this.recent = [f.key, ...this.recent].slice(0, 3);
+    return Math.random() < .5 ? { ...f } : { ...f, a: f.b, b: f.a };
+  },
+
+  // wynik: 'ok' (z czasem w ms), 'wrong', 'slow' (robot szybciej i dobrze)
+  record(f, result, ms = 0) {
+    const s = this.stats[f.key];
+    s.seen++;
+    if (result === 'ok') {
+      s.m += (1 - s.m) * (ms < 5000 ? .3 : .15);
+      if (this.due[f.key] !== undefined) {
+        this.gap[f.key] *= 2;
+        if (this.gap[f.key] > 16) { delete this.due[f.key]; delete this.gap[f.key]; }
+        else this.due[f.key] = this.n + this.gap[f.key];
+      }
+    } else {
+      s.m = Math.max(.03, s.m * (result === 'wrong' ? .5 : .8));
+      this.gap[f.key] = result === 'wrong' ? 2 : 3;
+      this.due[f.key] = this.n + this.gap[f.key];
+    }
+    this.save();
+  },
+
+  weakest(k) {
+    return this.list.filter(f => this.stats[f.key].seen > 0 && this.m(f) < .6)
+      .sort((x, y) => this.m(x) - this.m(y)).slice(0, k);
+  },
+};
+
+function weighted(items, w) {
+  const ws = items.map(w);
+  let r = Math.random() * ws.reduce((s, x) => s + x, 0);
+  for (let i = 0; i < items.length; i++) if ((r -= ws[i]) <= 0) return items[i];
+  return items[items.length - 1];
+}
 
 /* =========================== GRA =========================== */
 const PULLS_TO_WIN = 5;
 const MAX_LEVEL = 10;
-const STEP = 28;   // px w SVG na jedno przeciągnięcie (5 kroków = przeciwnik nad środkiem rowu)
+const STEP = 22;   // px w SVG na jedno przeciągnięcie; po 4 krokach zawodnik stoi na krawędzi, po 5 wpada
+const FALL_DX = 185, FALL_DY = 120;   // przesunięcie, które kładzie zawodnika w błocie na środku rowu
 
-// Parametry robota na danym poziomie.
+// Parametry robota na danym poziomie – robot przyspiesza tylko trochę.
 function cpuParams(level) {
   const t = (level - 1) / (MAX_LEVEL - 1);                     // 0 na poziomie 1, 1 na poziomie 10
   return {
-    accuracy: 0.40 + 0.55 * t,                                 // 40% → 95%
-    minTime: 4.5 - 3.4 * t,                                    // 4.5 s → 1.1 s
-    maxTime: 8.0 - 6.0 * t,                                    // 8.0 s → 2.0 s
+    accuracy: 0.45 + 0.40 * t,                                 // 45% → 85%
+    time: 10 - 3 * t,                                          // średnio 10 s → 7 s
     options: level <= 3 ? 3 : level <= 6 ? 4 : level <= 8 ? 5 : 6,
   };
 }
@@ -326,10 +511,13 @@ function cpuParams(level) {
 const $ = id => document.getElementById(id);
 const rnd = n => Math.floor(Math.random() * n);
 
-let level = 1, pos = 0, round = 0, current = null, locked = false;
+let level = 1, pos = 0, round = 0, current = null, locked = false, askedAt = 0;
 let cpuTimer = null, cpuStart = 0, cpuDuration = 0, barAnim = null;
 let good = 0, wrong = 0;
 let bestLevel = +localStorage.getItem('lina-level') || 1;
+
+Sound.updateBtn();
+Facts.init();
 
 if (bestLevel > 1) {
   $('best-info').textContent = `Ostatnio doszedłeś do poziomu ${bestLevel}.`;
@@ -345,8 +533,10 @@ function startLevel(lv) {
   Sound.init(); Sound.startMusic();
   level = lv; pos = 0; round = 0;
   $('level').textContent = level;
-  ['me', 'cpu'].forEach(id => $(id).classList.remove('fall', 'tug'));
-  $('splash').textContent = '';
+  ['me', 'cpu'].forEach(id => {
+    $(id).classList.remove('fall', 'tug', 'muddy');
+    $(id).removeAttribute('filter');
+  });
   drawScene();
   show('screen-game');
   nextQuestion();
@@ -361,13 +551,34 @@ function drawScene() {
 }
 
 function fall(who) {
-  const dx = pos * STEP;
   const el = $(who);
+  const me = who === 'me';
   el.classList.add('fall');
-  el.style.transform = `translate(${dx}px, 78px) rotate(${who === 'me' ? -80 : 80}deg)`;
-  Sound.splash();
-  $('splash').textContent = '💦';
-  setTimeout(() => { $('splash').textContent = ''; }, 1200);
+  el.style.transform = `translate(${me ? FALL_DX : -FALL_DX}px, ${FALL_DY}px) rotate(${me ? 75 : -75}deg)`;
+  if (me) Sound.boo(.3); else Sound.applause(.5);
+  setTimeout(() => {
+    Sound.splat();
+    mudSplash();
+    el.classList.add('muddy');
+    el.setAttribute('filter', 'url(#dirty)');
+  }, 650);
+}
+
+function mudSplash() {
+  const g = $('splash');
+  for (let i = 0; i < 16; i++) {
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('cx', 340 + rnd(40)); c.setAttribute('cy', 212);
+    c.setAttribute('r', 3 + Math.random() * 5);
+    c.setAttribute('fill', Math.random() < .5 ? '#5a3a1c' : '#7a5230');
+    g.appendChild(c);
+    const dx = (Math.random() - .5) * 220, up = 40 + Math.random() * 70;
+    c.animate([
+      { transform: 'translate(0,0)', opacity: 1 },
+      { transform: `translate(${dx * .5}px, ${-up}px)`, opacity: 1, offset: .45 },
+      { transform: `translate(${dx}px, ${-up * .2 + 20}px)`, opacity: 0 },
+    ], { duration: 900 + rnd(400), easing: 'ease-out' }).onfinish = () => c.remove();
+  }
 }
 
 function makeOptions(a, b, n) {
@@ -382,9 +593,8 @@ function makeOptions(a, b, n) {
     const v = candidates.length ? candidates.splice(rnd(candidates.length), 1)[0] : rnd(100) + 1;
     set.add(v);
   }
-  return [...set];
+  return [...set].sort((x, y) => x - y);
 }
-const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
 
 function renderButtons(boxId, values, clickable) {
   const box = $(boxId);
@@ -399,24 +609,25 @@ function renderButtons(boxId, values, clickable) {
 }
 
 function nextQuestion() {
-  let a, b;
-  do { a = rnd(9) + 2; b = rnd(9) + 2; } while (current && a === current.a && b === current.b);
-  current = { a, b, answer: a * b };
+  const f = Facts.pick(level);
+  current = { ...f, answer: f.a * f.b };
   round++;
   $('round').textContent = round;
-  $('question').textContent = `${a} × ${b} = ?`;
+  $('question').textContent = `${f.a} × ${f.b} = ?`;
   $('msg').textContent = ''; $('msg').className = 'msg';
   const p = cpuParams(level);
-  const opts = makeOptions(a, b, p.options);
-  renderButtons('ans-me', shuffle(opts), true);
-  renderButtons('ans-cpu', shuffle(opts), false);
+  const opts = makeOptions(f.a, f.b, p.options);
+  renderButtons('ans-me', opts, true);
+  renderButtons('ans-cpu', opts, false);
   $('hint').textContent = 'Kliknij odpowiedź albo wciśnij klawisz 1–' + p.options;
   locked = false;
+  askedAt = performance.now();
   startCpu(p);
 }
 
 function startCpu(p) {
-  cpuDuration = (p.minTime + Math.random() * (p.maxTime - p.minTime)) * 1000;
+  // trudniejsze działania zajmują robotowi trochę więcej czasu
+  cpuDuration = p.time * (0.8 + 0.4 * Math.random()) * (0.8 + 0.4 * current.hard) * 1000;
   cpuStart = performance.now();
   $('cpu-bar').style.width = '0%';
   cancelAnimationFrame(barAnim);
@@ -440,12 +651,14 @@ function studentAnswers(btn, value) {
   btns('ans-me').forEach(b => b.disabled = true);
   if (value === current.answer) {
     good++;
+    Facts.record(current, 'ok', performance.now() - askedAt);
     btn.classList.add('ok');
     Sound.ding();
     setMsg('✅ Dobrze i szybciej niż robot! Ciągniesz linę!', 'good');
     pull(-1, 'me');
   } else {
     wrong++;
+    Facts.record(current, 'wrong');
     btn.classList.add('bad');
     findBtn('ans-me', current.answer).classList.add('ok');
     Sound.buzz();
@@ -466,7 +679,9 @@ function cpuAnswers(accuracy) {
   Sound.robot();
   setTimeout(() => {
     if (isRight) {
+      Facts.record(current, 'slow');
       btn.classList.add('ok');
+      findBtn('ans-me', current.answer).classList.add('ok');
       setMsg(`🤖 Robot był szybszy: ${current.answer}. Ciągnie linę!`, 'bad');
       pull(+1, 'cpu');
     } else {
@@ -491,9 +706,9 @@ function pull(dir, who) {
   const el = $(who);
   el.classList.remove('tug'); void el.getBBox(); el.classList.add('tug');
   setTimeout(() => el.classList.remove('tug'), 700);
-  if (pos <= -PULLS_TO_WIN) { setTimeout(() => fall('cpu'), 600); return setTimeout(levelWon, 2300); }
-  if (pos >= PULLS_TO_WIN)  { setTimeout(() => fall('me'), 600);  return setTimeout(levelLost, 2300); }
-  setTimeout(nextQuestion, 1500);
+  if (pos <= -PULLS_TO_WIN) { setTimeout(() => fall('cpu'), 600); return setTimeout(levelWon, 3300); }
+  if (pos >= PULLS_TO_WIN)  { setTimeout(() => fall('me'), 600);  return setTimeout(levelLost, 3300); }
+  setTimeout(nextQuestion, 1800);
 }
 
 function drawLevels() {
@@ -508,6 +723,11 @@ function drawLevels() {
   }
 }
 
+function practiceText() {
+  const w = Facts.weakest(3);
+  return w.length ? ` Do poćwiczenia: ${w.map(f => `${f.a} × ${f.b}`).join(', ')}.` : '';
+}
+
 function levelWon() {
   Sound.fanfare();
   if (level >= MAX_LEVEL) {
@@ -520,8 +740,8 @@ function levelWon() {
   bestLevel = Math.max(bestLevel, level + 1);
   localStorage.setItem('lina-level', bestLevel);
   const next = cpuParams(level + 1);
-  $('level-title').textContent = `🎉 Wygrałeś poziom ${level}! Robot wpadł do rowu!`;
-  $('level-text').textContent = `Na poziomie ${level + 1} robot jest szybszy i myli się rzadziej, a odpowiedzi do wyboru jest ${next.options}.`;
+  $('level-title').textContent = `🎉 Wygrałeś poziom ${level}! Robot wpadł w błoto!`;
+  $('level-text').textContent = `Na poziomie ${level + 1} robot myli się rzadziej, trudnych pytań będzie więcej, a odpowiedzi do wyboru jest ${next.options}.` + practiceText();
   $('btn-next').textContent = `Poziom ${level + 1} →`;
   $('btn-next').onclick = () => startLevel(level + 1);
   drawLevels();
@@ -529,9 +749,8 @@ function levelWon() {
 }
 
 function levelLost() {
-  Sound.sad();
-  $('level-title').textContent = `😅 Wpadłeś do rowu! Robot wygrał poziom ${level}`;
-  $('level-text').textContent = 'Nic straconego – spróbuj jeszcze raz!';
+  $('level-title').textContent = `😅 Wpadłeś w błoto! Robot wygrał poziom ${level}`;
+  $('level-text').textContent = 'Nic straconego – spróbuj jeszcze raz!' + practiceText();
   $('btn-next').textContent = 'Jeszcze raz';
   $('btn-next').onclick = () => startLevel(level);
   drawLevels();
