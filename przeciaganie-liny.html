@@ -65,14 +65,22 @@
   .scared .body { animation:stumble .5s ease-in-out 2; }
   @keyframes stumble { 0%,100% { transform:rotate(-6deg); } 40% { transform:rotate(12deg) translateX(4px); } }
   .fall .body { animation:none; }
+  /* gesty: postać odwraca głowę do widza (.look) i robi głupią minę, poci się albo przeprasza za pierdnięcie */
+  .look .sweat { opacity:0; }
+  .ff { display:none; }
+  .g-silly .ff-silly, .g-sweat .ff-sweat, .g-oops .ff-oops { display:inline; }
+  .g-silly .ff-default, .g-sweat .ff-default, .g-oops .ff-default { display:none; }
+  .ff-sweat .bead { transform-box:fill-box; transform-origin:50% 0; animation:bead 1.4s ease-in both; }
+  .ff-sweat .bead.d2 { animation-delay:.25s; } .ff-sweat .bead.d3 { animation-delay:.5s; }
+  @keyframes bead { 0% { transform:scale(0); } 30% { transform:scale(1); } 100% { transform:translateY(9px) scale(1); } }
   /* dymek komiksowy i chmurka pierdnięcia (warstwa #fx nad sceną) */
   .say { transform-box:fill-box; transform-origin:50% 100%; animation:pop .25s cubic-bezier(.3,1.6,.5,1); }
   @keyframes pop { from { transform:scale(0); } }
   .say text { font:bold 17px "Comic Sans MS", "Comic Neue", system-ui, sans-serif; }
-  .puff { transform-box:fill-box; transform-origin:center; animation:puff 1.3s ease-out forwards; }
-  .puff.p2 { animation-delay:.08s; } .puff.p3 { animation-delay:.16s; }
-  @keyframes puff { from { transform:scale(.3); opacity:.85; } to { transform:scale(1.8) translate(var(--dx), -6px); opacity:0; } }
-  .pff { font:italic bold 13px system-ui, sans-serif; animation:puff 1.3s ease-out forwards; transform-box:fill-box; }
+  .puff { transform-box:fill-box; transform-origin:center; animation:puff 1.8s ease-out both; }
+  @keyframes puff { 0% { transform:scale(.2); opacity:.95; } 60% { opacity:.85; }
+                    100% { transform:translate(var(--dx), -14px) scale(2.2); opacity:0; } }
+  .pff { font:italic bold 16px "Comic Sans MS", "Comic Neue", system-ui, sans-serif; animation:puff 1.8s ease-out both; transform-box:fill-box; }
 
   /* ---------- pytanie i panele ---------- */
   .question { font-size:3.2rem; line-height:1.15; font-weight:bold; margin:.3rem 0 .2rem; }
@@ -233,6 +241,43 @@
               <path class="drop" d="M2 -118 q-3 5 0 6 q3 -1 0 -6 Z"/>
               <path class="drop d2" d="M-2 -124 q-3 5 0 6 q3 -1 0 -6 Z"/>
             </g>
+            <!-- en face: uczeń odwraca głowę do widza przy gestach -->
+            <g class="face-front">
+              <circle cx="-30" cy="-104" r="3.5" fill="#eab48a"/><circle cx="2" cy="-104" r="3.5" fill="#eab48a"/>
+              <circle cx="-14" cy="-106" r="16" fill="#f5c9a0"/>
+              <path d="M-30 -103 C-32 -117 -24 -124 -14 -124 C-4 -124 4 -117 2 -103 L-1 -111 L-5 -108 L-9 -114 L-14 -109
+                       L-19 -114 L-23 -108 L-27 -111 Z" fill="#6b4423"/>
+              <g class="ff-default">
+                <circle cx="-19" cy="-105" r="2.2" fill="#222"/><circle cx="-9" cy="-105" r="2.2" fill="#222"/>
+                <path d="M-18 -98 q4 3 8 0" stroke="#a33" stroke-width="2" fill="none"/>
+              </g>
+              <!-- głupia mina: zezowate oczy i wystawiony język -->
+              <g class="ff ff-silly">
+                <circle cx="-20" cy="-105" r="4.5" fill="#fff" stroke="#222"/><circle cx="-8" cy="-105" r="4.5" fill="#fff" stroke="#222"/>
+                <circle cx="-17.5" cy="-104" r="2" fill="#222"/><circle cx="-10.5" cy="-104" r="2" fill="#222"/>
+                <path d="M-20 -98 q6 2 12 0" stroke="#a33" stroke-width="2" fill="none" stroke-linecap="round"/>
+                <path d="M-17 -98 q0 8 3 8 q3 0 3 -8 Z" fill="#e8707a" stroke="#a33"/>
+              </g>
+              <!-- pot występuje na czoło: zmartwione brwi, falujące usta, krople -->
+              <g class="ff ff-sweat">
+                <path d="M-23 -110 l6 -3 M-5 -110 l-6 -3" stroke="#6b4423" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="-19" cy="-105" r="2.2" fill="#222"/><circle cx="-9" cy="-105" r="2.2" fill="#222"/>
+                <path d="M-19 -97 q2.5 -2 5 0 t5 0" stroke="#a33" stroke-width="2" fill="none"/>
+                <g fill="#5dade2" stroke="#2e86c1" stroke-width=".6">
+                  <path class="bead" d="M-24 -116 q-3 5 0 6 q3 -1 0 -6 Z"/>
+                  <path class="bead d2" d="M-6 -117 q-3 5 0 6 q3 -1 0 -6 Z"/>
+                  <path class="bead d3" d="M-15 -118 q-2.5 4 0 5 q2.5 -1 0 -5 Z"/>
+                </g>
+              </g>
+              <!-- „ups” po pierdnięciu: zawstydzony, rumieńce, wyszczerzone zęby -->
+              <g class="ff ff-oops">
+                <ellipse cx="-24" cy="-100" rx="4" ry="2.5" fill="#f08080" opacity=".8"/>
+                <ellipse cx="-4" cy="-100" rx="4" ry="2.5" fill="#f08080" opacity=".8"/>
+                <path d="M-22 -104 q3 -3 6 0 M-12 -104 q3 -3 6 0" stroke="#222" stroke-width="2" fill="none" stroke-linecap="round"/>
+                <rect x="-19" y="-100" width="10" height="5" rx="1.5" fill="#fff" stroke="#a33" stroke-width="1.2"/>
+                <path d="M-15.7 -100 v5 M-12.3 -100 v5" stroke="#a33" stroke-width=".8"/>
+              </g>
+            </g>
             <g class="mudspots" fill="#4a3018">
               <ellipse cx="-12" cy="-118" rx="9" ry="5"/><ellipse cx="-5" cy="-100" rx="4" ry="3"/>
               <ellipse cx="-6" cy="-72" rx="7" ry="11"/><ellipse cx="8" cy="-30" rx="5" ry="8"/>
@@ -271,9 +316,39 @@
             </g>
             <!-- en face: robot zerka na widza, gdy uda mu się pociągnąć -->
             <g class="face-front">
-              <circle cx="-20" cy="-116" r="4.5" fill="#e74c3c"/>
-              <circle cx="-6" cy="-116" r="4.5" fill="#e74c3c"/>
-              <rect x="-22" y="-107" width="18" height="3" fill="#2f3640"/>
+              <rect x="-30" y="-130" width="34" height="30" rx="6" fill="#bdc3c7" stroke="#5d6d7e" stroke-width="2"/>
+              <g class="ff-default">
+                <circle cx="-20" cy="-116" r="4.5" fill="#e74c3c"/>
+                <circle cx="-6" cy="-116" r="4.5" fill="#e74c3c"/>
+                <rect x="-22" y="-107" width="18" height="3" fill="#2f3640"/>
+              </g>
+              <!-- głupia mina: oczy każde inne, wystawiony język -->
+              <g class="ff ff-silly">
+                <circle cx="-20" cy="-117" r="6.5" fill="#fff" stroke="#2f3640" stroke-width="1.5"/>
+                <circle cx="-18" cy="-116" r="2.5" fill="#e74c3c"/>
+                <circle cx="-6" cy="-116" r="2.5" fill="#e74c3c"/>
+                <rect x="-22" y="-107" width="18" height="3" fill="#2f3640"/>
+                <rect x="-16" y="-106" width="7" height="9" rx="3.5" fill="#e8707a" stroke="#a33"/>
+              </g>
+              <!-- pot (olej) występuje na czoło: zmartwione brwi, usta-zygzak -->
+              <g class="ff ff-sweat">
+                <path d="M-25 -122 l6 2 M-1 -122 l-6 2" stroke="#2f3640" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="-20" cy="-115" r="3.5" fill="#e74c3c"/><circle cx="-6" cy="-115" r="3.5" fill="#e74c3c"/>
+                <polyline points="-21,-106 -18,-109 -15,-106 -12,-109 -9,-106 -6,-109" fill="none" stroke="#2f3640" stroke-width="2"/>
+                <g fill="#5dade2" stroke="#2e86c1" stroke-width=".6">
+                  <path class="bead" d="M-26 -128 q-3 5 0 6 q3 -1 0 -6 Z"/>
+                  <path class="bead d2" d="M0 -128 q-3 5 0 6 q3 -1 0 -6 Z"/>
+                  <path class="bead d3" d="M-13 -129 q-2.5 4 0 5 q2.5 -1 0 -5 Z"/>
+                </g>
+              </g>
+              <!-- „ups” po pierdnięciu: zawstydzony, rumieńce, oczy ^ ^ -->
+              <g class="ff ff-oops">
+                <ellipse cx="-25" cy="-109" rx="3.5" ry="2.5" fill="#f08080" opacity=".85"/>
+                <ellipse cx="-1" cy="-109" rx="3.5" ry="2.5" fill="#f08080" opacity=".85"/>
+                <polyline points="-24,-114 -20,-119 -16,-114" fill="none" stroke="#e74c3c" stroke-width="2.5" stroke-linecap="round"/>
+                <polyline points="-10,-114 -6,-119 -2,-114" fill="none" stroke="#e74c3c" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M-18 -107 q5 3 10 0" stroke="#2f3640" stroke-width="2" fill="none"/>
+              </g>
             </g>
             <!-- przerażony: wielkie oko, usta-sprężynka, czerwona migająca antena, iskry i krople oleju -->
             <g class="face-scared">
@@ -702,7 +777,7 @@ function startLevel(lv) {
     $(id).classList.remove('fall', 'tug', 'muddy', 'look', 'scared', 'danger');
     $(id).removeAttribute('filter');
   });
-  $('fx').innerHTML = '';
+  $('fx').innerHTML = ''; clearGestures();
   show('screen-game');
   layoutScene();
   drawScene();
@@ -768,18 +843,40 @@ function say(who, text) {
   svgEl('text', { x: 0, y: 3, 'text-anchor': 'middle', fill: '#222' }, inner).textContent = text;
   setTimeout(() => g.remove(), 1400);
 }
+// pierdnięcie: wyraźna chmura dymu z tyłka, lecąca za plecy
 function fart(who) {
-  const back = who === 'me' ? -1 : 1;                           // chmurka leci za plecy
-  const x = actorX(who) + (who === 'me' ? -32 : 42);           // za plecami (ciągnący mocno się odchyla)
-  const g = svgEl('g', { transform: `translate(${x} 130)` }, $('fx'));
-  [[0, 0, 8], [back * 10, -6, 7], [back * 6, 7, 6]].forEach(([cx, cy, r], i) =>
-    svgEl('circle', { class: `puff p${i + 1}`, cx, cy, r, fill: '#a3c24a', style: `--dx:${back * 6}px` }, g));
-  svgEl('text', { class: 'pff', x: back * 24, y: -10, 'text-anchor': 'middle', fill: '#5b6e1f', style: `--dx:${back * 4}px` }, g).textContent = 'pfff!';
+  const back = who === 'me' ? -1 : 1;
+  const x = actorX(who) + (who === 'me' ? -12 : 24), y = 124;
+  const g = svgEl('g', { transform: `translate(${x} ${y})` }, $('fx'));
+  [[0, 0, 7], [back * 7, -4, 8], [back * 14, 3, 7], [back * 20, -6, 9], [back * 27, 1, 8]].forEach(([cx, cy, r], i) =>
+    svgEl('circle', { class: 'puff', cx, cy, r, fill: i % 2 ? '#b5c45a' : '#9caf45', stroke: '#6f7f2a', 'stroke-width': 1.2,
+                      style: `--dx:${back * 14}px; animation-delay:${i * .07}s` }, g));
+  svgEl('text', { class: 'pff', x: back * 30, y: -16, 'text-anchor': 'middle', fill: '#5b6e1f',
+                  style: `--dx:${back * 8}px; animation-delay:.15s` }, g).textContent = 'pfff!';
   Sound.fart();
-  setTimeout(() => g.remove(), 1600);
+  setTimeout(() => g.remove(), 2200);
 }
-const OOPS = { me: ['Ups!', 'Ojej!', 'Aaa!', 'Ups!', 'O nie!'], cpu: ['Ups!', 'Bzzt!', 'Błąd!', 'Ups!', 'Bip?!'] };
-let lastFart = false;
+// Gest przeciąganego: odwraca głowę do widza i robi głupią minę, poci się albo pierdzi i mówi „Ups!”.
+const GESTURES = ['silly', 'sweat', 'fart'];
+let lastGesture = null, gestureTimers = [];
+function clearGestures() {
+  gestureTimers.forEach(clearTimeout); gestureTimers = [];
+  ['me', 'cpu'].forEach(id => $(id).classList.remove('g-silly', 'g-sweat', 'g-oops'));
+}
+function gesture(who) {
+  const kinds = GESTURES.filter(k => k !== lastGesture), kind = lastGesture = kinds[rnd(kinds.length)];
+  const el = $(who);
+  const later = (ms, f) => gestureTimers.push(setTimeout(f, ms));
+  const face = (cls, ms) => {
+    clearTimeout(scareTimer); clearTimeout(lookTimer);
+    el.classList.remove('scared'); el.classList.add('look', cls);
+    later(ms, () => el.classList.remove('look', cls));
+  };
+  if (kind === 'fart') {
+    later(250, () => fart(who));
+    later(800, () => { face('g-oops', 1300); say(who, 'Ups!'); });
+  } else later(450, () => face('g-' + kind, 1400));
+}
 
 function drawScene() {
   const dx = pos * geo.step;
@@ -794,7 +891,7 @@ function fall(who) {
   const el = $(who);
   const me = who === 'me';
   el.classList.add('fall');
-  clearTimeout(scareTimer); el.classList.remove('look'); el.classList.add('scared');   // leci do błota z przerażoną miną
+  clearTimeout(scareTimer); clearGestures(); el.classList.remove('look'); el.classList.add('scared');   // leci do błota z przerażoną miną
   el.style.transform = `translate(${me ? geo.fallDx : -geo.fallDx}px, ${FALL_DY}px) rotate(${me ? 75 : -75}deg)`;
   ropeFollows(who);
   if (me) Sound.boo(.3); else Sound.applause(.5);
@@ -959,15 +1056,14 @@ function pull(dir, who) {
   ['me', 'cpu'].forEach(id => $(id).classList.remove('scared'));
   void victim.getBBox(); victim.classList.add('scared');
   scareTimer = setTimeout(() => victim.classList.remove('scared'), 1300);
-  const vid = who === 'me' ? 'cpu' : 'me', oops = OOPS[vid];
-  say(vid, Math.abs(pos) >= PULLS_TO_WIN ? 'Aaaaa!' : oops[rnd(oops.length)]);
-  lastFart = !lastFart && Math.random() < .3;                // czasem ciągnący pierdnie z wysiłku (nigdy dwa razy z rzędu)
-  if (lastFart) fart(who);
+  clearGestures(); clearTimeout(lookTimer); el.classList.remove('look'); victim.classList.remove('look');
   if (who === 'cpu') {                          // robot zerka na widza po udanym pociągnięciu
-    clearTimeout(lookTimer);
     el.classList.add('look');
     lookTimer = setTimeout(() => el.classList.remove('look'), 1300);
   }
+  const lost = Math.abs(pos) >= PULLS_TO_WIN;
+  if (lost) say(who === 'me' ? 'cpu' : 'me', 'Aaaaa!');
+  else if (Math.random() < .6) gesture(who === 'me' ? 'cpu' : 'me');
   if (pos <= -PULLS_TO_WIN) { fall('cpu'); return setTimeout(levelWon, 2700); }
   if (pos >= PULLS_TO_WIN)  { fall('me');  return setTimeout(levelLost, 2700); }
   setTimeout(nextQuestion, 1800);
