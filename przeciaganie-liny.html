@@ -26,9 +26,12 @@
   #music-btn { right:4.2rem; }
   #music-btn.off { opacity:.4; }
   #next-btn { right:7.6rem; }
-  #now-playing { position:fixed; top:.8rem; right:11rem; max-width:calc(100vw - 12.4rem); padding:.35rem .7rem; border-radius:10px;
-                 background:var(--card); font-size:.95rem; opacity:.85; pointer-events:none;
-                 white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #now-playing { position:fixed; top:.8rem; right:11rem; max-width:calc(100vw - 12.4rem); padding:.35rem .7rem .3rem; border-radius:10px;
+                 background:var(--card); font-size:.95rem; opacity:.9; }
+  #np-title { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* pasek przewijania utworu z czasem */
+  #np-seek-row { display:flex; align-items:center; gap:.5rem; margin-top:.15rem; font-size:.8rem; opacity:.85; font-variant-numeric:tabular-nums; }
+  #np-seek { flex:1; min-width:6rem; height:1rem; margin:0; accent-color:var(--accent); cursor:pointer; }
 
   .status { display:flex; justify-content:space-between; align-items:center; gap:1rem; font-size:1.2rem; margin-top:auto; padding:.3rem .6rem 0; }
   .level { font-weight:bold; color:var(--accent); }
@@ -137,7 +140,10 @@
 <button id="next-btn" class="snd" onclick="Sound.nextTrack()" title="Następny utwór">⏭</button>
 <button id="music-btn" class="snd" onclick="Sound.toggleMusic()" title="Muzyka">🎵</button>
 <button id="sound-btn" class="snd" onclick="Sound.toggle()" title="Dźwięk">🔊</button>
-<div id="now-playing" class="hidden"></div>
+<div id="now-playing" class="hidden">
+  <div id="np-title"></div>
+  <div id="np-seek-row"><input type="range" id="np-seek" min="0" max="1" step="any" value="0" title="Przewiń utwór"><span id="np-time">0:00 / 0:00</span></div>
+</div>
 <div class="app">
 
   <div id="screen-start" class="banner">
@@ -581,6 +587,16 @@ const Sound = {
   startMusic() {
     if (this.audio) { this.syncMusic(); return; }
     this.audio = new Audio();
+    // pasek przewijania: podąża za odtwarzaniem, a przeciągnięty przewija utwór
+    const seek = $('np-seek'), fmt = sec => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
+    const showTime = () => {
+      const d = this.audio.duration || 0;
+      $('np-time').textContent = `${fmt(this.audio.currentTime)} / ${fmt(d)}`;
+      if (!this.seeking) { seek.max = d || 1; seek.value = this.audio.currentTime; }
+    };
+    this.audio.ontimeupdate = this.audio.ondurationchange = showTime;
+    seek.oninput = () => { this.seeking = true; $('np-time').textContent = `${fmt(+seek.value)} / ${fmt(this.audio.duration || 0)}`; };
+    seek.onchange = () => { this.audio.currentTime = +seek.value; this.seeking = false; seek.blur(); };
     this.audio.onended = () => {
       clearTimeout(this.nextTimer);
       this.nextTimer = setTimeout(() => this.playTrack((this.track + 1) % this.TRACKS.length), 1000);
@@ -599,7 +615,7 @@ const Sound = {
     // pliki z Wikimedia Commons: MP3 wygenerowany przez Commons z oryginału (…/transcoded/<plik>/<nazwa>.mp3)
     this.audio.src = t.src || this.WIKI + t.wiki + '/' + t.wiki.split('/').pop() + '.mp3';
     this.audio.volume = Math.min(1, 10 ** ((this.MUSIC_LUFS - t.lufs) / 20));
-    $('now-playing').textContent = `🎵 ${t.author} – ${t.title}`;
+    $('np-title').textContent = `🎵 ${t.author} – ${t.title}`;
     this.syncMusic();
   },
   syncMusic() {
