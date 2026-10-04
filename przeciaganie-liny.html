@@ -155,8 +155,10 @@
        myli się rzadziej i odpowiada szybciej, a <b>pytania, z którymi masz kłopot</b>, wracają częściej.</p>
     <p id="best-info"></p>
     <p class="credit">Muzyka: „Taniec Wieszczki Cukrowej” P. Czajkowskiego w wykonaniu Kevina MacLeoda (incompetech.com), licencja CC BY 3.0;
-       „Zima” A. Vivaldiego w wykonaniu Johna Harrisona, licencja CC BY-SA 4.0; pozostałe utwory w wykonaniu
-       Musopen Symphony Orchestra i The Modena Chamber Orchestra (Musopen), domena publiczna.</p>
+       „Zima” A. Vivaldiego w wykonaniu Johna Harrisona, licencja CC BY-SA 4.0; „Cwałowanie Walkirii” R. Wagnera w wykonaniu
+       Filharmonii w Ulm pod dyr. Jamesa Allena Gähresa i VIII Symfonia F. Schuberta w wykonaniu Fort Collins Symphony Orchestra,
+       licencja EFF Open Audio License; pozostałe utwory w wykonaniu Musopen Symphony Orchestra i The Modena Chamber Orchestra
+       (Musopen), domena publiczna.</p>
     <button onclick="startLevel(1)">Start od poziomu 1</button>
     <button id="btn-continue" class="hidden" onclick="startLevel(bestLevel)">Kontynuuj</button>
   </div>
@@ -565,6 +567,8 @@ const Sound = {
   // Oryginalne nagrania linkowane prosto ze źródeł (incompetech.com, Wikimedia Commons); licencje w podpisie na ekranie startowym.
   // lufs: zmierzona średnia głośność nagrania (ffmpeg ebur128). Każdy utwór jest ściszany tak, żeby średnio brzmiał
   // jak najcichszy (Beethoven, grany na pełnej głośności) – sama głośność, dynamika nagrań jest nietknięta.
+  // full: utwory z ogromną dynamiką (Grieg – jedno crescendo, Schubert – długie ciche fragmenty i nagłe tutti):
+  // średnią zawyżają głośne fragmenty, a przez większość czasu są o ~10 dB cichsze, więc grają na pełnej głośności.
   MUSIC_LUFS: -22.3,
   WIKI: 'https://upload.wikimedia.org/wikipedia/commons/transcoded/',
   TRACKS: [
@@ -572,7 +576,7 @@ const Sound = {
       src: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Dance%20of%20the%20Sugar%20Plum%20Fairy.mp3' },
     { author: 'Antonio Vivaldi', title: '„Wiosna” z „Czterech pór roku”, część 1', lufs: -20.3,
       wiki: '1/18/The_Modena_Chamber_Orchestra_-_Vivaldi%27s_Spring%2C_RV_269_-_I._Allegro.ogg' },
-    { author: 'Edvard Grieg', title: '„W grocie Króla Gór” z „Peer Gynta”', lufs: -12.4,
+    { author: 'Edvard Grieg', title: '„W grocie Króla Gór” z „Peer Gynta”', lufs: -12.4, full: true,
       wiki: '8/84/Grieg_-_Peer_Gynt_Suite_No._1%2C_Op._46_-_IV._In_the_Hall_of_the_Mountain_King_%28Musopen_Symphony%29.flac' },
     { author: 'Ludwig van Beethoven', title: 'V Symfonia („Symfonia losu”), część 1', lufs: -22.3,
       wiki: 'e/e6/Ludwig_van_Beethoven_-_symphony_no._5_in_c_minor%2C_op._67_-_i._allegro_con_brio.ogg' },
@@ -580,8 +584,12 @@ const Sound = {
       wiki: '1/17/The_Modena_Chamber_Orchestra_-_Vivaldi%27s_Summer%2C_RV_315_-_III._Presto.ogg' },
     { author: 'Bedřich Smetana', title: '„Wełtawa” z cyklu „Moja ojczyzna”', lufs: -12.3,
       wiki: '3/39/Smetana_-_M%C3%A1_Vlast_-_Vltava_%28Musopen_Symphony%29.flac' },
+    { author: 'Richard Wagner', title: '„Cwałowanie Walkirii” z opery „Walkiria”', lufs: -15.6,
+      wiki: '7/76/Richard_Wagner_-_The_Valkyrie_-_Ride_of_the_Valkyries.flac' },
     { author: 'Antonio Vivaldi', title: '„Zima” z „Czterech pór roku”, część 1', lufs: -21.0,
       wiki: '2/2a/Vivaldi_-_Four_Seasons_4_Winter_mvt_1_Allegro_non_molto_-_John_Harrison_violin.oga' },
+    { author: 'Franz Schubert', title: 'VIII Symfonia „Niedokończona”, część 1', lufs: -15.8, full: true,
+      wiki: '9/96/Schubert_Symphony_No._8_%27Unfinished%27_-_1-_Allegro_moderato_in_B_minor.ogg' },
   ],
   audio: null, track: 0, nextTimer: null,
   startMusic() {
@@ -614,7 +622,7 @@ const Sound = {
     const t = this.TRACKS[i];
     // pliki z Wikimedia Commons: MP3 wygenerowany przez Commons z oryginału (…/transcoded/<plik>/<nazwa>.mp3)
     this.audio.src = t.src || this.WIKI + t.wiki + '/' + t.wiki.split('/').pop() + '.mp3';
-    this.audio.volume = Math.min(1, 10 ** ((this.MUSIC_LUFS - t.lufs) / 20));
+    this.audio.volume = t.full ? 1 : Math.min(1, 10 ** ((this.MUSIC_LUFS - t.lufs) / 20));
     $('np-title').textContent = `🎵 ${t.author} – ${t.title}`;
     this.syncMusic();
   },
