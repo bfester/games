@@ -302,7 +302,7 @@
 /* =========================== DŹWIĘK =========================== */
 const Sound = {
   ctx: null, master: null,
-  SFX_VOL: 0.25,             // efekty są syntetyczne i głośne – ściszone, żeby nie zagłuszały nagrań
+  SFX_VOL: 0.12,             // efekty są syntetyczne i głośne – mocno ściszone, żeby nie zagłuszały muzyki
   on: localStorage.getItem('lina-sound') !== 'off',
   musicOn: localStorage.getItem('lina-music') !== 'off',
   clapBuf: null,
@@ -418,22 +418,24 @@ const Sound = {
 
   // ---- muzyka: nagrania grane po kolei z sekundą przerwy; które pierwsze, losuje się przy starcie ----
   // Oryginalne nagrania linkowane prosto ze źródeł (incompetech.com, Wikimedia Commons); licencje w podpisie na ekranie startowym.
-  // vol dobrane tak, żeby utwory średnio brzmiały podobnie głośno (pomiar LUFS); dynamika nagrań jest nietknięta.
+  // lufs: zmierzona średnia głośność nagrania (ffmpeg ebur128). Każdy utwór jest ściszany tak, żeby średnio brzmiał
+  // jak najcichszy (Beethoven, grany na pełnej głośności) – sama głośność, dynamika nagrań jest nietknięta.
+  MUSIC_LUFS: -22.3,
   WIKI: 'https://upload.wikimedia.org/wikipedia/commons/transcoded/',
   TRACKS: [
-    { author: 'Piotr Czajkowski', title: '„Taniec Wieszczki Cukrowej” z baletu „Dziadek do orzechów”', vol: .5,
+    { author: 'Piotr Czajkowski', title: '„Taniec Wieszczki Cukrowej” z baletu „Dziadek do orzechów”', lufs: -18.5,
       src: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Dance%20of%20the%20Sugar%20Plum%20Fairy.mp3' },
-    { author: 'Antonio Vivaldi', title: '„Wiosna” z „Czterech pór roku”, część 1', vol: .62,
+    { author: 'Antonio Vivaldi', title: '„Wiosna” z „Czterech pór roku”, część 1', lufs: -20.3,
       wiki: '1/18/The_Modena_Chamber_Orchestra_-_Vivaldi%27s_Spring%2C_RV_269_-_I._Allegro.ogg' },
-    { author: 'Edvard Grieg', title: '„W grocie Króla Gór” z „Peer Gynta”', vol: .25,
+    { author: 'Edvard Grieg', title: '„W grocie Króla Gór” z „Peer Gynta”', lufs: -12.4,
       wiki: '8/84/Grieg_-_Peer_Gynt_Suite_No._1%2C_Op._46_-_IV._In_the_Hall_of_the_Mountain_King_%28Musopen_Symphony%29.flac' },
-    { author: 'Ludwig van Beethoven', title: 'V Symfonia („Symfonia losu”), część 1', vol: .77,
+    { author: 'Ludwig van Beethoven', title: 'V Symfonia („Symfonia losu”), część 1', lufs: -22.3,
       wiki: 'e/e6/Ludwig_van_Beethoven_-_symphony_no._5_in_c_minor%2C_op._67_-_i._allegro_con_brio.ogg' },
-    { author: 'Antonio Vivaldi', title: '„Lato” z „Czterech pór roku”, część 3 („Burza”)', vol: .5,
+    { author: 'Antonio Vivaldi', title: '„Lato” z „Czterech pór roku”, część 3 („Burza”)', lufs: -18.6,
       wiki: '1/17/The_Modena_Chamber_Orchestra_-_Vivaldi%27s_Summer%2C_RV_315_-_III._Presto.ogg' },
-    { author: 'Bedřich Smetana', title: '„Wełtawa” z cyklu „Moja ojczyzna”', vol: .25,
+    { author: 'Bedřich Smetana', title: '„Wełtawa” z cyklu „Moja ojczyzna”', lufs: -12.3,
       wiki: '3/39/Smetana_-_M%C3%A1_Vlast_-_Vltava_%28Musopen_Symphony%29.flac' },
-    { author: 'Antonio Vivaldi', title: '„Zima” z „Czterech pór roku”, część 1', vol: .67,
+    { author: 'Antonio Vivaldi', title: '„Zima” z „Czterech pór roku”, część 1', lufs: -21.0,
       wiki: '2/2a/Vivaldi_-_Four_Seasons_4_Winter_mvt_1_Allegro_non_molto_-_John_Harrison_violin.oga' },
   ],
   audio: null, track: 0, nextTimer: null,
@@ -451,7 +453,7 @@ const Sound = {
     const t = this.TRACKS[i];
     // pliki z Wikimedia Commons: MP3 wygenerowany przez Commons z oryginału (…/transcoded/<plik>/<nazwa>.mp3)
     this.audio.src = t.src || this.WIKI + t.wiki + '/' + t.wiki.split('/').pop() + '.mp3';
-    this.audio.volume = t.vol;
+    this.audio.volume = Math.min(1, 10 ** ((this.MUSIC_LUFS - t.lufs) / 20));
     $('now-playing').textContent = `🎵 ${t.author} – ${t.title}`;
     this.syncMusic();
   },
