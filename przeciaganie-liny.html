@@ -25,6 +25,9 @@
   #sound-btn { right:.8rem; }
   #music-btn { right:4.2rem; }
   #music-btn.off { opacity:.4; }
+  #now-playing { position:fixed; top:.8rem; right:7.6rem; max-width:calc(100vw - 9rem); padding:.35rem .7rem; border-radius:10px;
+                 background:var(--card); font-size:.95rem; opacity:.85; pointer-events:none;
+                 white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
   .status { display:flex; justify-content:space-between; align-items:center; gap:1rem; font-size:1.2rem; margin-top:auto; padding:.3rem .6rem 0; }
   .level { font-weight:bold; color:var(--accent); }
@@ -105,6 +108,7 @@
 <body>
 <button id="music-btn" class="snd" onclick="Sound.toggleMusic()" title="Muzyka">🎵</button>
 <button id="sound-btn" class="snd" onclick="Sound.toggle()" title="Dźwięk">🔊</button>
+<div id="now-playing" class="hidden"></div>
 <div class="app">
 
   <div id="screen-start" class="banner">
@@ -115,8 +119,9 @@
     <p>Przeciągnij linę <b>5 razy</b> do siebie, żeby wygrać poziom.<br>Poziomów jest <b><span class="max-level"></span></b> – z każdym robot
        myli się rzadziej i odpowiada szybciej, a <b>pytania, z którymi masz kłopot</b>, wracają częściej.</p>
     <p id="best-info"></p>
-    <p class="credit">Muzyka: „Dance of the Sugar Plum Fairy” P. I. Czajkowskiego w wykonaniu Kevina MacLeoda (incompetech.com), licencja CC BY 3.0,
-       „In the Hall of the Mountain King” E. Griega oraz „Wełtawa” B. Smetany w wykonaniu Musopen Symphony Orchestra, domena publiczna.</p>
+    <p class="credit">Muzyka: „Taniec Wieszczki Cukrowej” P. Czajkowskiego w wykonaniu Kevina MacLeoda (incompetech.com), licencja CC BY 3.0;
+       „Zima” A. Vivaldiego w wykonaniu Johna Harrisona, licencja CC BY-SA 4.0; pozostałe utwory w wykonaniu
+       Musopen Symphony Orchestra i The Modena Chamber Orchestra (Musopen), domena publiczna.</p>
     <button onclick="startLevel(1)">Start od poziomu 1</button>
     <button id="btn-continue" class="hidden" onclick="startLevel(bestLevel)">Kontynuuj</button>
   </div>
@@ -412,15 +417,24 @@ const Sound = {
   },
 
   // ---- muzyka: nagrania grane po kolei z sekundą przerwy; które pierwsze, losuje się przy starcie ----
-  // Oryginalne nagrania linkowane prosto ze źródeł (incompetech.com, Wikimedia Commons):
-  //  Czajkowski, „Dance of the Sugar Plum Fairy” – wyk. Kevin MacLeod, CC BY 3.0
-  //  Grieg, „In the Hall of the Mountain King” – wyk. Musopen Symphony Orchestra, domena publiczna
-  //  Smetana, „Wełtawa” – wyk. Musopen Symphony Orchestra, domena publiczna
-  // Głośności dobrane tak, żeby średnio brzmiały podobnie (nagrania Musopen są o ok. 6 dB głośniejsze).
+  // Oryginalne nagrania linkowane prosto ze źródeł (incompetech.com, Wikimedia Commons); licencje w podpisie na ekranie startowym.
+  // vol dobrane tak, żeby utwory średnio brzmiały podobnie głośno (pomiar LUFS); dynamika nagrań jest nietknięta.
+  WIKI: 'https://upload.wikimedia.org/wikipedia/commons/transcoded/',
   TRACKS: [
-    { src: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Dance%20of%20the%20Sugar%20Plum%20Fairy.mp3', vol: .5 },
-    { src: 'https://upload.wikimedia.org/wikipedia/commons/transcoded/8/84/Grieg_-_Peer_Gynt_Suite_No._1%2C_Op._46_-_IV._In_the_Hall_of_the_Mountain_King_%28Musopen_Symphony%29.flac/Grieg_-_Peer_Gynt_Suite_No._1%2C_Op._46_-_IV._In_the_Hall_of_the_Mountain_King_%28Musopen_Symphony%29.flac.mp3', vol: .25 },
-    { src: 'https://upload.wikimedia.org/wikipedia/commons/transcoded/3/39/Smetana_-_M%C3%A1_Vlast_-_Vltava_%28Musopen_Symphony%29.flac/Smetana_-_M%C3%A1_Vlast_-_Vltava_%28Musopen_Symphony%29.flac.mp3', vol: .25 },
+    { author: 'Piotr Czajkowski', title: '„Taniec Wieszczki Cukrowej” z baletu „Dziadek do orzechów”', vol: .5,
+      src: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Dance%20of%20the%20Sugar%20Plum%20Fairy.mp3' },
+    { author: 'Antonio Vivaldi', title: '„Wiosna” z „Czterech pór roku”, część 1', vol: .62,
+      wiki: '1/18/The_Modena_Chamber_Orchestra_-_Vivaldi%27s_Spring%2C_RV_269_-_I._Allegro.ogg' },
+    { author: 'Edvard Grieg', title: '„W grocie Króla Gór” z „Peer Gynta”', vol: .25,
+      wiki: '8/84/Grieg_-_Peer_Gynt_Suite_No._1%2C_Op._46_-_IV._In_the_Hall_of_the_Mountain_King_%28Musopen_Symphony%29.flac' },
+    { author: 'Ludwig van Beethoven', title: 'V Symfonia („Symfonia losu”), część 1', vol: .77,
+      wiki: 'e/e6/Ludwig_van_Beethoven_-_symphony_no._5_in_c_minor%2C_op._67_-_i._allegro_con_brio.ogg' },
+    { author: 'Antonio Vivaldi', title: '„Lato” z „Czterech pór roku”, część 3 („Burza”)', vol: .5,
+      wiki: '1/17/The_Modena_Chamber_Orchestra_-_Vivaldi%27s_Summer%2C_RV_315_-_III._Presto.ogg' },
+    { author: 'Bedřich Smetana', title: '„Wełtawa” z cyklu „Moja ojczyzna”', vol: .25,
+      wiki: '3/39/Smetana_-_M%C3%A1_Vlast_-_Vltava_%28Musopen_Symphony%29.flac' },
+    { author: 'Antonio Vivaldi', title: '„Zima” z „Czterech pór roku”, część 1', vol: .67,
+      wiki: '2/2a/Vivaldi_-_Four_Seasons_4_Winter_mvt_1_Allegro_non_molto_-_John_Harrison_violin.oga' },
   ],
   audio: null, track: 0, nextTimer: null,
   startMusic() {
@@ -434,13 +448,18 @@ const Sound = {
   },
   playTrack(i) {
     this.track = i;
-    this.audio.src = this.TRACKS[i].src;
-    this.audio.volume = this.TRACKS[i].vol;
+    const t = this.TRACKS[i];
+    // pliki z Wikimedia Commons: MP3 wygenerowany przez Commons z oryginału (…/transcoded/<plik>/<nazwa>.mp3)
+    this.audio.src = t.src || this.WIKI + t.wiki + '/' + t.wiki.split('/').pop() + '.mp3';
+    this.audio.volume = t.vol;
+    $('now-playing').textContent = `🎵 ${t.author} – ${t.title}`;
     this.syncMusic();
   },
   syncMusic() {
     if (!this.audio) return;
-    if (this.on && this.musicOn) this.audio.play().catch(() => {}); else this.audio.pause();
+    const play = this.on && this.musicOn;
+    if (play) this.audio.play().catch(() => {}); else this.audio.pause();
+    $('now-playing').classList.toggle('hidden', !play);
   },
 };
 
