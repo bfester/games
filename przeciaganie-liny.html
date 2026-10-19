@@ -742,23 +742,28 @@ const Sound = {
 // rzadziej, póki uczeń odpowiada dobrze. Opanowanie, kolejka powtórek (due/gap) i licznik pytań n są
 // zapisywane w localStorage, więc zaległe powtórki wracają także po ponownym uruchomieniu gry.
 const Facts = {
-  list: [], stats: {}, due: {}, gap: {}, n: 0, recent: [], times: [],
+  list: [], stats: {}, due: {}, gap: {}, n: 0, recent: [],
   load() {
     const saved = JSON.parse(localStorage.getItem('lina-mem') || 'null');
-    if (saved) {
-      this.stats = saved.stats || {}; this.due = saved.due || {}; this.gap = saved.gap || {}; this.n = saved.n || 0;
-      this.times = saved.times || [];
-    }
+    if (saved) { this.stats = saved.stats || {}; this.due = saved.due || {}; this.gap = saved.gap || {}; this.n = saved.n || 0; }
     else this.stats = JSON.parse(localStorage.getItem('lina-facts') || '{}');   // format ze starszej wersji
   },
   save() {
-    localStorage.setItem('lina-mem', JSON.stringify({ stats: this.stats, due: this.due, gap: this.gap, n: this.n, times: this.times }));
+    localStorage.setItem('lina-mem', JSON.stringify({ stats: this.stats, due: this.due, gap: this.gap, n: this.n }));
   },
-  // mediana czasu ostatnich 20 dobrych odpowiedzi ucznia (ms) albo null, gdy jeszcze nic nie wiadomo
-  medianTime() {
-    if (this.times.length < 5) return null;
-    const t = [...this.times].sort((x, y) => x - y);
-    return t[Math.floor(t.length / 2)];
+  // Ile czasu (ms) uczeń zwykle potrzebuje na dobrą odpowiedź na to działanie. Uczeń myśli dłużej nad 7×8
+  // niż nad 2×5, więc czas pamiętany jest osobno dla każdego działania (stats[key].t, średnia wykładnicza).
+  // Gdy działanie nie ma jeszcze czasu, bierze medianę czasów działań o podobnej trudności, a na końcu
+  // medianę ze wszystkich. null, gdy uczeń nie odpowiedział jeszcze dobrze na nic.
+  bucket(f) { return f.hard <= .25 ? 0 : f.hard < .6 ? 1 : 2; },
+  expectedTime(f) {
+    const own = this.stats[f.key].t;
+    if (own) return own;
+    const median = list => {
+      const t = list.map(x => this.stats[x.key].t).filter(Boolean).sort((x, y) => x - y);
+      return t.length ? t[Math.floor(t.length / 2)] : null;
+    };
+    return median(this.list.filter(x => this.bucket(x) === this.bucket(f))) || median(this.list);
   },
 
   // wrodzona trudność działania 0..1 (×2, ×10, ×5 łatwe; 6–9 × 6–9 trudne)
@@ -811,7 +816,7 @@ const Facts = {
     s.seen++;
     if (result === 'ok') {
       s.m += (1 - s.m) * (ms < 5000 ? .3 : .15);
-      this.times = [...this.times, Math.round(ms)].slice(-20);
+      s.t = Math.round(s.t ? s.t * .6 + ms * .4 : ms);
       if (this.due[f.key] !== undefined) {
         this.gap[f.key] *= 2;
         if (this.gap[f.key] > 16) { delete this.due[f.key]; delete this.gap[f.key]; }
@@ -857,18 +862,18 @@ const LEVEL_END = 3700;    // wtedy pokazuje się ekran końca poziomu       // 
 const geo = { xl: 170, xr: 550, step: 22, fallDx: 185 };
 
 // Parametry robota na danym poziomie: coraz rzadziej się myli i coraz szybciej odpowiada.
-// Tempo robota jest względne wobec tempa ucznia (mediana czasu jego ostatnich dobrych odpowiedzi):
-// na poziomie 1 robot jest 3× wolniejszy, w połowie ok. 1,7×, na poziomie 20 ok. 1,1×, a na ostatnim
-// tylko 1,03×. W symulacji daje to ~100% wygranych do poziomu 18, ~93% na 22 i ~85% na 25, przy coraz
-// dłuższych pojedynkach (6 rund na początku, ~20 na końcu). Dzięki temu gra jest lekko zacięta niezależnie
-// od tego, jak szybko uczeń klika. Zanim zbierze się 5 odpowiedzi, obowiązuje stała skala 10 s → 2 s.
-function cpuParams(level) {
+// Tempo robota jest względne wobec czasu, jakiego uczeń zwykle potrzebuje na TO działanie (Facts.expectedTime):
+// na poziomie 1 robot jest 3× wolniejszy, w połowie ok. 1,7×, na poziomie 20 ok. 1,15×, a na ostatnim 1,1×.
+// W symulacji daje to ~100% wygranych do poziomu 18, ~94% na 22 i ~86% na 25, przy coraz dłuższych
+// pojedynkach (6 rund na początku, ~20 na końcu). Dzięki temu gra jest lekko zacięta niezależnie od tego,
+// jak szybko uczeń klika. Bez żadnych danych o uczniu obowiązuje stała skala 10 s → 2 s, dłuższa dla trudnych.
+function cpuParams(level, fact) {
   const t = (level - 1) / (MAX_LEVEL - 1);                     // 0 na poziomie 1, 1 na ostatnim
-  const median = Facts.medianTime();
-  const mult = 1.03 + 1.97 * Math.pow(1 - t, 2.2);
+  const mult = 1.1 + 1.9 * Math.pow(1 - t, 2.2);
+  const own = fact && Facts.expectedTime(fact);
   return {
     accuracy: 0.45 + 0.52 * t,                                 // 45% → 97%
-    time: median ? Math.min(10, median / 1000 * mult) : 10 - 8 * t,
+    time: own ? Math.min(10, own / 1000 * mult) : (10 - 8 * t) * (fact ? 0.8 + 0.4 * fact.hard : 1),
     options: level <= 4 ? 3 : level <= 9 ? 4 : level <= 15 ? 5 : 6,
   };
 }
@@ -1186,7 +1191,7 @@ function nextQuestion() {
   $('round').textContent = round;
   $('question').textContent = `${f.a} × ${f.b} = ?`;
   $('msg').textContent = ''; $('msg').className = 'msg';
-  const p = cpuParams(level);
+  const p = cpuParams(level, f);
   const opts = makeOptions(f.a, f.b, p.options);
   renderButtons('ans-me', opts, true);
   renderButtons('ans-cpu', opts, false);
@@ -1197,8 +1202,7 @@ function nextQuestion() {
 }
 
 function startCpu(p) {
-  // trudniejsze działania zajmują robotowi trochę więcej czasu
-  cpuDuration = p.time * (0.8 + 0.4 * Math.random()) * (0.8 + 0.4 * current.hard) * 1000;
+  cpuDuration = p.time * (0.8 + 0.4 * Math.random()) * 1000;   // p.time uwzględnia już trudność działania
   cpuStart = performance.now();
   $('cpu-bar').style.width = '0%';
   cancelAnimationFrame(barAnim);
