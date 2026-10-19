@@ -143,7 +143,7 @@
                 opacity:.4; text-decoration:underline; }
   button.link:hover { transform:none; opacity:.7; }
   .levels { display:flex; gap:.4rem; justify-content:center; flex-wrap:wrap; margin:1rem 0; }
-  .levels span { width:34px; height:34px; border-radius:50%; background:var(--card); display:flex;
+  .levels span { width:30px; height:30px; border-radius:50%; background:var(--card); display:flex;
                  align-items:center; justify-content:center; font-weight:bold; }
   .levels span.done { background:var(--ok); color:#111; }
   .levels span.cur { background:var(--accent); color:#111; }
@@ -742,14 +742,23 @@ const Sound = {
 // rzadziej, póki uczeń odpowiada dobrze. Opanowanie, kolejka powtórek (due/gap) i licznik pytań n są
 // zapisywane w localStorage, więc zaległe powtórki wracają także po ponownym uruchomieniu gry.
 const Facts = {
-  list: [], stats: {}, due: {}, gap: {}, n: 0, recent: [],
+  list: [], stats: {}, due: {}, gap: {}, n: 0, recent: [], times: [],
   load() {
     const saved = JSON.parse(localStorage.getItem('lina-mem') || 'null');
-    if (saved) { this.stats = saved.stats || {}; this.due = saved.due || {}; this.gap = saved.gap || {}; this.n = saved.n || 0; }
+    if (saved) {
+      this.stats = saved.stats || {}; this.due = saved.due || {}; this.gap = saved.gap || {}; this.n = saved.n || 0;
+      this.times = saved.times || [];
+    }
     else this.stats = JSON.parse(localStorage.getItem('lina-facts') || '{}');   // format ze starszej wersji
   },
   save() {
-    localStorage.setItem('lina-mem', JSON.stringify({ stats: this.stats, due: this.due, gap: this.gap, n: this.n }));
+    localStorage.setItem('lina-mem', JSON.stringify({ stats: this.stats, due: this.due, gap: this.gap, n: this.n, times: this.times }));
+  },
+  // mediana czasu ostatnich 20 dobrych odpowiedzi ucznia (ms) albo null, gdy jeszcze nic nie wiadomo
+  medianTime() {
+    if (this.times.length < 5) return null;
+    const t = [...this.times].sort((x, y) => x - y);
+    return t[Math.floor(t.length / 2)];
   },
 
   // wrodzona trudność działania 0..1 (×2, ×10, ×5 łatwe; 6–9 × 6–9 trudne)
@@ -769,12 +778,15 @@ const Facts = {
   },
   m(f) { return this.stats[f.key].m; },
 
-  // Na poziomie 1 ~20% pytań to „trudne” (słabo opanowane), na ostatnim ~90%. Pozostałe losowane są
-  // z całej tabliczki: na początku raczej łatwe, im wyżej, tym rzadziej ×2 i ×10, a częściej 6–9 × 6–9.
+  // Na poziomie 1 ~20% pytań to „trudne”, na ostatnim ~90%. „Trudne” to przede wszystkim działania słabo
+  // opanowane przez ucznia, ale gdy uczeń umie już wszystko, decyduje wrodzona trudność działania (6–9 × 6–9),
+  // rosnąca z poziomem – bez tego losowanie stawało się jednostajne i ×2 wypadało tak samo często jak 7×8.
+  // Pozostałe pytania są z całej tabliczki: na początku raczej łatwe, im wyżej, tym rzadziej ×2 i ×10.
   // Zaległa powtórka (niedawny błąd) wraca od razu z prawdopodobieństwem 50% → 100% rosnącym z poziomem.
+  // Mieszanka zaostrza się szybko (pierwiastek z postępu), żeby już w połowie poziomów przeważały trudne.
   pick(level) {
     this.n++;
-    const t = (level - 1) / (MAX_LEVEL - 1);
+    const t = Math.sqrt((level - 1) / (MAX_LEVEL - 1));
     const pHard = 0.2 + 0.7 * t;
     const pDue = 0.5 + 0.5 * t;
     const pool = this.list.filter(f => !this.recent.includes(f.key));
@@ -785,7 +797,9 @@ const Facts = {
     // zaległa powtórka: losowo (częściej na wyższych poziomach) albo gdy czeka już długo
     if (due.length && (Math.random() < pDue || this.n - this.due[due[0].key] >= 4)) f = due[0];
     // losowanie „zwykłe”: na niskich poziomach sprzyja łatwym działaniom, na wysokich trudnym
-    else f = weighted(pool, hard ? x => Math.pow(1 - this.m(x), 3) + .002 : x => (1 - t) * (1.1 - x.hard) + t * (.2 + x.hard));
+    else f = weighted(pool, hard
+      ? x => Math.pow(1 - this.m(x), 3) + .002 * ((1 - t) + t * 60 * x.hard * x.hard)
+      : x => (1 - t) * (1.1 - x.hard) + t * (.2 + x.hard));
     this.recent = [f.key, ...this.recent].slice(0, 3);
     this.save();
     return Math.random() < .5 ? { ...f } : { ...f, a: f.b, b: f.a };
@@ -797,6 +811,7 @@ const Facts = {
     s.seen++;
     if (result === 'ok') {
       s.m += (1 - s.m) * (ms < 5000 ? .3 : .15);
+      this.times = [...this.times, Math.round(ms)].slice(-20);
       if (this.due[f.key] !== undefined) {
         this.gap[f.key] *= 2;
         if (this.gap[f.key] > 16) { delete this.due[f.key]; delete this.gap[f.key]; }
@@ -829,7 +844,7 @@ function weighted(items, w) {
 }
 
 /* =========================== GRA =========================== */
-const MAX_LEVEL = 15;
+const MAX_LEVEL = 25;
 const PULLS_TO_WIN = 5;    // tyle przeciągnięć (netto) trzeba, żeby wciągnąć przeciwnika do rowu
 const PIT_EDGE = 258;      // x zawodnika, gdy stoi stopami na skraju rowu (rów zaczyna się przy x=290)
 const START_X = 182;       // x ucznia na starcie (robot symetrycznie); stąd długość liny i jednego przeciągnięcia
@@ -842,12 +857,19 @@ const LEVEL_END = 3700;    // wtedy pokazuje się ekran końca poziomu       // 
 const geo = { xl: 170, xr: 550, step: 22, fallDx: 185 };
 
 // Parametry robota na danym poziomie: coraz rzadziej się myli i coraz szybciej odpowiada.
+// Tempo robota jest względne wobec tempa ucznia (mediana czasu jego ostatnich dobrych odpowiedzi):
+// na poziomie 1 robot jest 3× wolniejszy, w połowie ok. 1,7×, na poziomie 20 ok. 1,1×, a na ostatnim
+// tylko 1,03×. W symulacji daje to ~100% wygranych do poziomu 18, ~93% na 22 i ~85% na 25, przy coraz
+// dłuższych pojedynkach (6 rund na początku, ~20 na końcu). Dzięki temu gra jest lekko zacięta niezależnie
+// od tego, jak szybko uczeń klika. Zanim zbierze się 5 odpowiedzi, obowiązuje stała skala 10 s → 2 s.
 function cpuParams(level) {
   const t = (level - 1) / (MAX_LEVEL - 1);                     // 0 na poziomie 1, 1 na ostatnim
+  const median = Facts.medianTime();
+  const mult = 1.03 + 1.97 * Math.pow(1 - t, 2.2);
   return {
-    accuracy: 0.45 + 0.50 * t,                                 // 45% → 95%
-    time: 10 - 6.5 * t,                                        // średnio 10 s → 3,5 s
-    options: level <= 3 ? 3 : level <= 7 ? 4 : level <= 11 ? 5 : 6,
+    accuracy: 0.45 + 0.52 * t,                                 // 45% → 97%
+    time: median ? Math.min(10, median / 1000 * mult) : 10 - 8 * t,
+    options: level <= 4 ? 3 : level <= 9 ? 4 : level <= 15 ? 5 : 6,
   };
 }
 
