@@ -862,18 +862,24 @@ const LEVEL_END = 3700;    // wtedy pokazuje się ekran końca poziomu       // 
 const geo = { xl: 170, xr: 550, step: 22, fallDx: 185 };
 
 // Parametry robota na danym poziomie: coraz rzadziej się myli i coraz szybciej odpowiada.
-// Tempo robota jest względne wobec czasu, jakiego uczeń zwykle potrzebuje na TO działanie (Facts.expectedTime):
-// na poziomie 1 robot jest 3× wolniejszy, w połowie ok. 1,7×, na poziomie 20 ok. 1,15×, a na ostatnim 1,1×.
-// W symulacji daje to ~100% wygranych do poziomu 18, ~94% na 22 i ~86% na 25, przy coraz dłuższych
-// pojedynkach (6 rund na początku, ~20 na końcu). Dzięki temu gra jest lekko zacięta niezależnie od tego,
-// jak szybko uczeń klika. Bez żadnych danych o uczniu obowiązuje stała skala 10 s → 2 s, dłuższa dla trudnych.
+// Tempo robota jest względne wobec czasu, jakiego uczeń zwykle potrzebuje na TO działanie (Facts.expectedTime),
+// ale z dwoma zabezpieczeniami przed wyścigiem: robot zawsze dostaje stały zapas (2,5 s → 1,5 s) ponad czas
+// ucznia i nigdy nie odpowiada szybciej niż w 4 s → 2,5 s. Dzięki temu działanie, które uczeń zna i klika
+// w sekundę, nie staje się nagle trudne tylko dlatego, że robot też zaczyna je klikać w sekundę.
+// Mnożnik: 2,5× na poziomie 1, ok. 1,45× w połowie, 1,1× na ostatnim. Przykład na poziomie 25: uczeń 1,2 s → robot
+// 2,5 s; uczeń 5 s → robot 6,5 s. Uczeń przegrywa rundę głównie wtedy, gdy się zawaha albo pomyli, więc w symulacji
+// (85-95% trafień, 15% zawahań) wygrywa 95-100% pojedynków, ale na wysokich poziomach trwają one 11-16 rund zamiast 6.
+// Bez żadnych danych o uczniu obowiązuje stała skala 10 s → 3 s, dłuższa dla trudnych.
 function cpuParams(level, fact) {
   const t = (level - 1) / (MAX_LEVEL - 1);                     // 0 na poziomie 1, 1 na ostatnim
-  const mult = 1.1 + 1.9 * Math.pow(1 - t, 2.2);
+  const mult = 1.1 + 1.4 * Math.pow(1 - t, 2);
+  const slack = 2.5 - 1.5 * t;                                 // stały zapas w sekundach
+  const floor = 4 - 1.5 * t;                                   // minimalny czas robota w sekundach
   const own = fact && Facts.expectedTime(fact);
+  const time = own ? own / 1000 * mult + slack : (10 - 7 * t) * (fact ? 0.8 + 0.4 * fact.hard : 1);
   return {
     accuracy: 0.45 + 0.52 * t,                                 // 45% → 97%
-    time: own ? Math.min(10, own / 1000 * mult) : (10 - 8 * t) * (fact ? 0.8 + 0.4 * fact.hard : 1),
+    time: Math.min(12, Math.max(floor, time)),
     options: level <= 4 ? 3 : level <= 9 ? 4 : level <= 15 ? 5 : 6,
   };
 }
