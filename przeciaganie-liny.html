@@ -68,14 +68,19 @@
   .scared .body { animation:stumble .5s ease-in-out 2; }
   @keyframes stumble { 0%,100% { transform:rotate(-6deg); } 40% { transform:rotate(12deg) translateX(4px); } }
   .fall .body { animation:none; }
-  /* zwycięzca: puszcza linę, staje przodem, podskakuje z rękami w górze, potem pręży bicepsy */
-  .arms-win, .arms-flex { display:none; }
+  /* zwycięzca: puszcza linę, staje przodem, podskakuje z rękami w górze, potem pręży bicepsy
+     albo pokazuje gest Kozakiewicza (zgięta ręka z pięścią w górze, druga dłoń klepie ją w zgięcie łokcia) */
+  .arms-win, .arms-flex, .arms-kozak { display:none; }
   .win .arms-pull { display:none; }
-  .win:not(.flex) .arms-win, .win.flex .arms-flex { display:inline; }
+  .win:not(.flex):not(.kozak) .arms-win, .win.flex .arms-flex, .win.kozak .arms-kozak { display:inline; }
   .win .body { animation:hop .45s ease-in-out 3; }
   .win.flex .body { animation:flexpose .6s ease-in-out 2; }
+  .win.kozak .body { animation:kozaklean .5s ease-in-out 2; }
+  .win.kozak .arms-kozak .forearm { animation:kozakjerk .5s ease-in-out 2; }
   @keyframes hop { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-10px); } }
   @keyframes flexpose { 0%,100% { transform:scale(1); } 50% { transform:scale(1.06, .97); } }
+  @keyframes kozaklean { 0%,100% { transform:rotate(0); } 50% { transform:rotate(-4deg); } }
+  @keyframes kozakjerk { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
   /* gesty: postać odwraca głowę do widza (.look) i robi głupią minę, poci się albo przeprasza za pierdnięcie */
   .look .sweat { opacity:0; }
   .ff { display:none; }
@@ -264,6 +269,13 @@
                 <circle cx="-36" cy="-111" r="6"/><circle cx="14" cy="-111" r="6"/>
               </g>
             </g>
+            <!-- gest Kozakiewicza: prawa ręka zgięta, pięść w górze; lewa dłoń klepie ją w zgięcie łokcia -->
+            <g class="arms-kozak" stroke="#f5c9a0" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+              <line x1="-8" y1="-84" x2="16" y2="-78"/>
+              <g class="forearm"><line x1="16" y1="-78" x2="18" y2="-106"/><circle cx="18" cy="-109" r="6.5" fill="#f5c9a0" stroke="none"/></g>
+              <line x1="-12" y1="-84" x2="8" y2="-76"/>
+              <circle cx="12" cy="-77" r="6" fill="#f5c9a0" stroke="none"/>
+            </g>
             <circle cx="-14" cy="-106" r="16" fill="#f5c9a0"/>
             <!-- krótkie, rozczochrane włosy z grzywką -->
             <path d="M-30 -99 C-34 -112 -28 -123 -15 -124 C-4 -125 3 -119 2 -111
@@ -387,6 +399,13 @@
                 <ellipse cx="-31" cy="-94" rx="7" ry="5.5" fill="#95a5a6"/><ellipse cx="17" cy="-94" rx="7" ry="5.5" fill="#95a5a6"/>
                 <rect x="-50" y="-120" width="12" height="12" rx="3" fill="#5d6d7e"/><rect x="24" y="-120" width="12" height="12" rx="3" fill="#5d6d7e"/>
               </g>
+            </g>
+            <!-- gest Kozakiewicza: prawa ręka zgięta, pięść w górze; lewa dłoń klepie ją w zgięcie łokcia -->
+            <g class="arms-kozak" stroke="#7f8c8d" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+              <line x1="6" y1="-88" x2="32" y2="-82"/>
+              <g class="forearm"><line x1="32" y1="-82" x2="34" y2="-108"/><rect x="28" y="-118" width="12" height="12" rx="3" fill="#5d6d7e" stroke="none"/></g>
+              <line x1="-20" y1="-88" x2="22" y2="-80"/>
+              <rect x="20" y="-87" width="11" height="11" rx="3" fill="#5d6d7e" stroke="none"/>
             </g>
             <rect x="-30" y="-130" width="34" height="30" rx="6" fill="#bdc3c7" stroke="#5d6d7e" stroke-width="2"/>
             <!-- profil: robot patrzy w stronę liny (jedno oko z przodu głowy) -->
@@ -855,7 +874,7 @@ const PIT_EDGE = 258;      // x zawodnika, gdy stoi stopami na skraju rowu (rów
 const START_X = 182;       // x ucznia na starcie (robot symetrycznie); stąd długość liny i jednego przeciągnięcia
 const FALL_DY = 120;
 const WIN_POSE_AT = 1000;  // ms od początku upadku: wygrany puszcza linę i cieszy się przodem do widza
-const FLEX_AT = 2100;      // …a potem pręży bicepsy
+const FLEX_AT = 2100;      // …a potem pręży bicepsy albo pokazuje gest Kozakiewicza (losowo)
 const LEVEL_END = 3700;    // wtedy pokazuje się ekran końca poziomu       // przesunięcie w dół, które kładzie zawodnika w błocie
 // Geometria sceny: odległości są stałe – na szerokim ekranie widać tylko więcej trawy po bokach,
 // a wygrywający, odciągnięty o PULLS_TO_WIN przeciągnięć, zawsze mieści się w kadrze.
@@ -945,7 +964,7 @@ function startLevel(lv) {
   level = lv; pos = 0; round = 0;
   $('level').textContent = level;
   ['me', 'cpu'].forEach(id => {
-    $(id).classList.remove('fall', 'tug', 'muddy', 'look', 'scared', 'danger', 'win', 'flex');
+    $(id).classList.remove('fall', 'tug', 'muddy', 'look', 'scared', 'danger', 'win', 'flex', 'kozak');
     $(id).removeAttribute('filter');
   });
   $('fx').innerHTML = ''; clearGestures();
@@ -1128,7 +1147,8 @@ function fall(who) {
   clearTimeout(scareTimer); clearGestures(who); el.classList.add('scared');
   const win = me ? 'cpu' : 'me', w = $(win);
   later(win, WIN_POSE_AT, () => { w.classList.add('win', 'look'); w.dataset.g = 'happy'; });
-  later(win, FLEX_AT, () => { w.classList.add('flex'); w.dataset.g = 'brows'; });   // leci do błota z przerażoną miną
+  const pose = Math.random() < .5 ? 'flex' : 'kozak';
+  later(win, FLEX_AT, () => { w.classList.add(pose); w.dataset.g = 'brows'; });   // leci do błota z przerażoną miną
   el.style.transform = `translate(${me ? geo.fallDx : -geo.fallDx}px, ${FALL_DY}px) rotate(${me ? 75 : -75}deg)`;
   ropeFollows(who);
   if (me) Sound.boo(.3); else Sound.applause(.5);
