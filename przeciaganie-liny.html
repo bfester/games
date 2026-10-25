@@ -10,9 +10,10 @@
   body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
          background:var(--bg); color:var(--fg); font-family:system-ui, sans-serif; }
   .app { width:min(97vw, 860px); text-align:center; padding:.5rem 0; }
-  .app.wide { width:98vw; padding:0; }
-  /* ekran gry mieści się w wysokości okna: scena rozciąga się na wolne miejsce, reszta jest pod nią */
-  #screen-game { height:100vh; height:100dvh; display:flex; flex-direction:column; padding:.3rem 0; }
+  .app.wide { width:98vw; height:100vh; height:100dvh; padding:0; display:flex; flex-direction:column; }
+  /* Pytania i odtwarzacz mieszczą się w oknie, a scena wypełnia całą pozostałą wysokość. */
+  #screen-game { flex:1; min-height:0; display:flex; flex-direction:column; padding:.3rem 0; }
+  #screen-game > :not(svg.scene) { flex-shrink:0; }
   #screen-game svg.scene { margin-top:.2rem; }
   .hidden { display:none !important; }
   h1 { margin:.2rem 0 .6rem; }
@@ -21,12 +22,10 @@
            background:var(--accent); color:#111; cursor:pointer; transition:transform .1s; }
   button:hover { transform:scale(1.04); }
 
-  .snd { position:fixed; top:.7rem; font-size:1.4rem; padding:.4rem .7rem; background:var(--card); color:var(--fg); }
-  #sound-btn { right:.8rem; }
-  #music-btn { right:4.2rem; }
+  .audio-toolbar { display:flex; flex-shrink:0; align-items:center; justify-content:flex-end; gap:.3rem; padding:.5rem 0 .2rem; }
+  .snd { flex-shrink:0; font-size:1.4rem; padding:.4rem .7rem; background:var(--card); color:var(--fg); }
   #music-btn.off { opacity:.4; }
-  #next-btn { right:7.6rem; }
-  #now-playing { position:fixed; top:.8rem; right:11rem; max-width:calc(100vw - 12.4rem); padding:.35rem .7rem .3rem; border-radius:10px;
+  #now-playing { flex:1; min-width:0; max-width:44rem; padding:.35rem .7rem .3rem; border-radius:10px;
                  background:var(--card); font-size:.95rem; opacity:.9; }
   #np-title { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   /* pasek przewijania utworu z czasem */
@@ -37,7 +36,7 @@
   .level { font-weight:bold; color:var(--accent); }
 
   /* ---------- scena ---------- */
-  svg.scene { width:100%; flex:1 1 120px; min-height:110px; max-height:min(46vh, 48vw); display:block; border-radius:14px; }
+  svg.scene { width:100%; height:0; min-height:0; flex:1 1 0; display:block; border-radius:14px; }
   .actor { transition:transform .6s cubic-bezier(.3,1.3,.5,1); transform-box:fill-box; transform-origin:center; }
   .actor.fall { transition:transform .9s cubic-bezier(.5,0,.8,.4); }
   .rope-g { transition:transform .6s cubic-bezier(.3,1.3,.5,1); }
@@ -154,6 +153,8 @@
   .levels span.cur { background:var(--accent); color:#111; }
 
   @media (max-width:600px) {
+    .audio-toolbar { flex-wrap:wrap; }
+    #now-playing { flex:1 0 100%; max-width:100%; }
     .question { font-size:2.4rem; }
     .answers button { font-size:1.4rem; padding:.35rem 0; }
     .board { gap:.5rem; }
@@ -165,17 +166,17 @@
     .answers button { font-size:1.4rem; padding:.3rem 0; }
     .msg { font-size:1.1rem; }
     .hint { visibility:hidden; }
+    .panel { padding:.25rem .4rem; }
+    .panel h3 { padding-top:.2rem; margin-bottom:0; font-size:1rem; }
+    .answers { gap:.3rem; }
+    .bar { height:8px; margin-top:.25rem; }
+    .bar-label { margin-top:.1rem; font-size:.8rem; }
+    .audio-toolbar { padding-top:.2rem; }
+    .status { padding-top:.1rem; font-size:.9rem; }
   }
 </style>
 </head>
 <body>
-<button id="next-btn" class="snd" onclick="Sound.nextTrack()" title="Następny utwór">⏭</button>
-<button id="music-btn" class="snd" onclick="Sound.toggleMusic()" title="Muzyka">🎵</button>
-<button id="sound-btn" class="snd" onclick="Sound.toggle()" title="Dźwięk">🔊</button>
-<div id="now-playing" class="hidden">
-  <div id="np-title"></div>
-  <div id="np-seek-row"><input type="range" id="np-seek" min="0" max="1" step="any" value="0" title="Przewiń utwór"><span id="np-time">0:00 / 0:00</span></div>
-</div>
 <div class="app">
 
   <div id="screen-start" class="banner">
@@ -537,6 +538,16 @@
     <p>Twoje dobre odpowiedzi: <b id="win-good"></b>, złe: <b id="win-wrong"></b></p>
     <br>
     <button onclick="location.reload()">Od nowa</button>
+  </div>
+
+  <div class="audio-toolbar" role="group" aria-label="Odtwarzacz muzyki i dźwięk">
+    <div id="now-playing" class="hidden">
+      <div id="np-title"></div>
+      <div id="np-seek-row"><input type="range" id="np-seek" min="0" max="1" step="any" value="0" title="Przewiń utwór"><span id="np-time">0:00 / 0:00</span></div>
+    </div>
+    <button id="next-btn" class="snd" onclick="Sound.nextTrack()" title="Następny utwór">⏭</button>
+    <button id="music-btn" class="snd" onclick="Sound.toggleMusic()" title="Muzyka">🎵</button>
+    <button id="sound-btn" class="snd" onclick="Sound.toggle()" title="Dźwięk">🔊</button>
   </div>
 
 </div>
@@ -915,7 +926,10 @@ Sound.updateBtn();
 Facts.load();
 Facts.init();
 document.querySelectorAll('.max-level').forEach(el => el.textContent = MAX_LEVEL);
-window.addEventListener('resize', () => { if (!$('screen-game').classList.contains('hidden')) { layoutScene(); drawScene(); } });
+// Zmiana wysokości paska muzyki też zmienia miejsce dostępne na scenę.
+new ResizeObserver(() => {
+  if (!$('screen-game').classList.contains('hidden')) { layoutScene(); drawScene(); }
+}).observe($('scene'));
 
 if (bestLevel > 1) {
   $('best-info').textContent = `Ostatnio doszedłeś do poziomu ${bestLevel}.`;
